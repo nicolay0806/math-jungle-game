@@ -45,7 +45,6 @@ const generateQuestion = (isBoss = false) => {
   const categories = ['addition', 'multiplication', 'placeValue', 'measurement', 'logic'];
   const type = categories[Math.floor(Math.random() * categories.length)];
 
-  // 魔王關卡題目可以稍微難一點點，或是保持原樣
   switch (type) {
     case 'addition': 
       const a1 = Math.floor(Math.random() * 50) + 10;
@@ -76,8 +75,9 @@ const MathJungleGame = () => {
   const [currentQ, setCurrentQ] = useState(generateQuestion());
   const [userInput, setUserInput] = useState('');
   const [showReward, setShowReward] = useState(false);
-  const [showBossVictory, setShowBossVictory] = useState(false); // 魔王勝利彈窗
-  const [score, setScore] = useState(1000); 
+  const [showBossVictory, setShowBossVictory] = useState(false);
+  // --- 修正：初始石幣改為 100 ---
+  const [score, setScore] = useState(100); 
   const [combo, setCombo] = useState(0);
   const [msg, setMsg] = useState('Yabba Dabba Doo！');
   
@@ -88,9 +88,9 @@ const MathJungleGame = () => {
   const [gachaResult, setGachaResult] = useState(null); 
 
   // --- 魔王關卡狀態 ---
-  const [totalSolved, setTotalSolved] = useState(0); // 總答對題數
-  const [isBossActive, setIsBossActive] = useState(false); // 是否在打魔王
-  const [bossStreak, setBossStreak] = useState(0); // 魔王關連續答對題數 (目標10)
+  const [totalSolved, setTotalSolved] = useState(0); 
+  const [isBossActive, setIsBossActive] = useState(false); 
+  const [bossStreak, setBossStreak] = useState(0); 
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 50; 
 
@@ -123,7 +123,6 @@ const MathJungleGame = () => {
       const finalPoints = currentQ.points + (combo * 5) + bonus;
       setScore(score + finalPoints);
       
-      // 處理 SSR 消耗
       const usedSSRId = equippedItems.find(id => ITEMS_DB.find(i => i.id === id).rarity === 'SSR');
       let rewardMsg = bonus > 0 ? `(+${bonus}分)！獲得 ${finalPoints} 石幣！` : `獲得 ${finalPoints} 石幣！`;
 
@@ -138,40 +137,33 @@ const MathJungleGame = () => {
         rewardMsg = `神器碎裂了... 但你答對了！`;
       }
 
-      // --- 魔王關卡邏輯 ---
       if (isBossActive) {
         const newBossStreak = bossStreak + 1;
         setBossStreak(newBossStreak);
         
         if (newBossStreak >= BOSS_TARGET) {
-          // 擊敗魔王！
           setIsBossActive(false);
           setBossStreak(0);
-          setShowBossVictory(true); // 顯示魔王獎勵
+          setShowBossVictory(true); 
           setMsg("傳說達成！擊敗了魔王！");
           
-          // 送一個 SSR
           const ssrItems = ITEMS_DB.filter(i => i.rarity === 'SSR');
           const rewardSSR = ssrItems[Math.floor(Math.random() * ssrItems.length)];
           setInventory(prev => [...prev, rewardSSR.id]);
         } else {
-          // 魔王關還沒過，繼續
           setShowReward(true);
           setCombo(combo + 1);
           setMsg(`魔王受傷了！(${newBossStreak}/${BOSS_TARGET}) ` + rewardMsg);
         }
       } else {
-        // --- 普通關卡邏輯 ---
         const newTotal = totalSolved + 1;
         setTotalSolved(newTotal);
         setCombo(combo + 1);
         
-        // 檢查是否觸發魔王
         if (newTotal > 0 && newTotal % BOSS_TRIGGER_COUNT === 0) {
           setIsBossActive(true);
           setBossStreak(0);
           setMsg("⚠️ 警告！巨大的腳步聲接近了！ ⚠️");
-          // 這裡不顯示普通獎勵彈窗，直接切換到魔王介面會比較順，或者顯示一個警告彈窗
           setTimeout(() => alert("吼！！！魔王出現了！必須連續答對 10 題才能擊退牠！"), 100);
         } else {
           setShowReward(true);
@@ -185,9 +177,8 @@ const MathJungleGame = () => {
       setUserInput('');
       
       if (isBossActive) {
-        setBossStreak(0); // 魔王關答錯，進度歸零！
+        setBossStreak(0); 
         setMsg('😱 慘了！被魔王打飛！進度歸零！(0/10)');
-        // 加入震動特效邏輯可選
       } else {
         setMsg('哎呀！被石頭絆倒了，再試一次！');
       }
@@ -198,7 +189,7 @@ const MathJungleGame = () => {
     setShowReward(false);
     setShowBossVictory(false);
     setUserInput('');
-    setCurrentQ(generateQuestion(isBossActive)); // 如果是魔王關，產生新題目
+    setCurrentQ(generateQuestion(isBossActive)); 
     if (!isBossActive && !showBossVictory) {
        setMsg('下一隻猛獸來了！小心！');
     }
@@ -249,14 +240,12 @@ const MathJungleGame = () => {
     const hasSSR = equippedItems.some(id => ITEMS_DB.find(i => i.id === id).rarity === 'SSR');
     const totalBonus = getTotalBonus();
     
-    // 背景顏色判斷
     const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasSSR ? 'bg-purple-100 border-purple-500' : 'bg-stone-200 border-stone-700');
     const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : 'bg-orange-500 border-stone-800 hover:bg-orange-400');
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md flex flex-col items-center relative z-10">
         
-        {/* 魔王關專屬 UI */}
         {isBossActive && (
           <div className="w-full mb-4">
             <div className="flex justify-between items-end mb-1 px-2">
@@ -273,7 +262,6 @@ const MathJungleGame = () => {
           </div>
         )}
 
-        {/* 裝備欄 */}
         {!isBossActive && (
           <div className="flex gap-2 mb-4 min-h-[50px]">
             {equippedItems.map((id, index) => {
@@ -289,9 +277,7 @@ const MathJungleGame = () => {
           </div>
         )}
 
-        {/* 題目卡片 */}
         <div className={`w-full p-8 rounded-[2rem] border-[6px] shadow-[10px_10px_0px_0px_rgba(60,60,60,0.5)] relative transition-colors duration-500 ${bgClass}`}>
-          {/* 魔王關特效 */}
           {isBossActive && <div className="absolute inset-0 border-4 border-red-500 rounded-[1.5rem] animate-pulse pointer-events-none opacity-50"></div>}
 
           <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-orange-400 text-stone-900 px-6 py-2 rounded-xl text-lg font-black border-4 border-stone-800 shadow-sm rotate-1 whitespace-nowrap">
@@ -323,12 +309,10 @@ const MathJungleGame = () => {
           </button>
         </div>
         
-        {/* 訊息欄 */}
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
         </p>
 
-        {/* 總進度顯示 */}
         {!isBossActive && (
           <div className="mt-2 text-xs font-bold text-stone-400">
             距離魔王來襲: {BOSS_TRIGGER_COUNT - (totalSolved % BOSS_TRIGGER_COUNT)} 題
@@ -338,7 +322,6 @@ const MathJungleGame = () => {
     );
   };
 
-  // 其他渲染函數保持不變 (Gacha, Bag...)
   const renderGacha = () => (
     <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="w-full max-w-md bg-stone-200 p-6 rounded-3xl border-8 border-stone-700 relative z-10 text-center">
       <h2 className="text-3xl font-black text-stone-800 mb-4">恐龍蛋轉蛋機</h2>
@@ -414,7 +397,6 @@ const MathJungleGame = () => {
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 font-mono overflow-hidden relative selection:bg-orange-300 transition-colors duration-1000 ${isBossActive ? 'bg-red-950' : 'bg-amber-100'}`}>
       
-      {/* 背景裝飾 */}
       <div className="absolute top-10 left-10 text-6xl opacity-40 animate-bounce duration-[3000ms]">{isBossActive ? '🌋' : '☁️'}</div>
       <div className="absolute bottom-20 right-10 text-8xl opacity-20 -rotate-12 select-none">{isBossActive ? '🦖' : '🦕'}</div>
 
@@ -435,7 +417,6 @@ const MathJungleGame = () => {
       {view === 'gacha' && renderGacha()}
       {view === 'bag' && renderBag()}
 
-      {/* 普通獎勵彈窗 */}
       <AnimatePresence>
         {showReward && !isBossActive && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -449,7 +430,6 @@ const MathJungleGame = () => {
         )}
       </AnimatePresence>
 
-      {/* 魔王獎勵彈窗 (SSR) */}
       <AnimatePresence>
         {showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -468,7 +448,6 @@ const MathJungleGame = () => {
         )}
       </AnimatePresence>
       
-      {/* 答對但還在打魔王時的過場 (不顯示彈窗，只閃一下) */}
       {isBossActive && showReward && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.8 }} className="text-9xl font-black text-green-400 drop-shadow-lg">
@@ -477,7 +456,7 @@ const MathJungleGame = () => {
         </div>
       )}
 
-      <div className="fixed bottom-2 right-2 text-stone-400 text-xs font-bold opacity-50">Math Flintstones v7.0 Boss Rush</div>
+      <div className="fixed bottom-2 right-2 text-stone-400 text-xs font-bold opacity-50">Math Flintstones v7.1 Economy Patch</div>
     </div>
   );
 };
