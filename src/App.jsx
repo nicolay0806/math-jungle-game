@@ -1,100 +1,157 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- 道具資料庫 ---
+// --- V8.0 道具資料庫 (維持 V7.1 設定) ---
 const ITEMS_DB = [
-  // --- SSR (傳說級) - 消耗品：一次性顯示答案 ---
+  // --- SSR (傳說級) ---
   { id: 1, name: '暴龍透視鏡', rarity: 'SSR', icon: '🦖', effect: '看穿答案 (消耗)', desc: '一次性神器，使用後消失。' },
   { id: 2, name: '先知的石板', rarity: 'SSR', icon: '🗿', effect: '看穿答案 (消耗)', desc: '上面刻著正解，用完會風化。' },
   { id: 3, name: '黃金計算機', rarity: 'SSR', icon: '🧮', effect: '看穿答案 (消耗)', desc: '古文明科技，電力僅供一次。' },
   { id: 4, name: '智慧長老之靈', rarity: 'SSR', icon: '👻', effect: '看穿答案 (消耗)', desc: '召喚長老代答，之後需休息。' },
   { id: 5, name: '外星人頭盔', rarity: 'SSR', icon: '👽', effect: '看穿答案 (消耗)', desc: '接收宇宙訊號，用過即丟。' },
-  
-  // --- SR (稀有級) - 裝備：分數+10 ---
+  // --- SR (稀有級) ---
   { id: 6, name: '黑曜石矛', rarity: 'SR', icon: '🗡️', effect: '分數+10', desc: '鋒利無比，狩獵必備。' },
   { id: 7, name: '劍齒虎皮', rarity: 'SR', icon: '🐯', effect: '分數+10', desc: '穿上去充滿勇氣！' },
   { id: 8, name: '琥珀項鍊', rarity: 'SR', icon: '📿', effect: '分數+10', desc: '凝結了時間的寶石。' },
   { id: 9, name: '雷龍蛋', rarity: 'SR', icon: '🥚', effect: '分數+10', desc: '充滿生命力的大蛋。' },
   { id: 10, name: '薩滿面具', rarity: 'SR', icon: '👺', effect: '分數+10', desc: '戴上後頭腦變靈活了。' },
-  { id: 11, name: '巨大烤腿肉', rarity: 'SR', icon: '🍖', effect: '分數+10', desc: '吃飽了才有力氣算數！' },
-  { id: 12, name: '精緻石輪', rarity: 'SR', icon: '⚙️', effect: '分數+10', desc: '滾動吧！科技的起點。' },
-  { id: 13, name: '水晶蘑菇', rarity: 'SR', icon: '🍄', effect: '分數+10', desc: '發出智慧的光芒。' },
-  { id: 14, name: '部落號角', rarity: 'SR', icon: '📯', effect: '分數+10', desc: '吹響勝利的聲音！' },
-  { id: 15, name: '獸骨迴力鏢', rarity: 'SR', icon: '🪃', effect: '分數+10', desc: '百發百中的好幫手。' },
-
-  // --- S (實用級) - 裝備：分數+5 ---
+  // --- S (實用級) ---
   { id: 16, name: '堅固石碗', rarity: 'S', icon: '🥣', effect: '分數+5', desc: '磨得很光滑，很好用。' },
   { id: 17, name: '美味烤魚', rarity: 'S', icon: '🐟', effect: '分數+5', desc: '香噴噴的，補充體力。' },
   { id: 18, name: '乾燥木柴', rarity: 'S', icon: '🪵', effect: '分數+5', desc: '生火必備，帶來溫暖。' },
   { id: 19, name: '漂亮的鵝卵石', rarity: 'S', icon: '🪨', effect: '分數+5', desc: '圓潤可愛，帶來好運。' },
-  { id: 20, name: '結實草鞋', rarity: 'S', icon: '👡', effect: '分數+5', desc: '走再遠的路也不怕。' },
-  { id: 21, name: '幸運四葉草', rarity: 'S', icon: '🍀', effect: '分數+5', desc: '找到它，考試都考100分。' },
-  { id: 22, name: '大片樹葉', rarity: 'S', icon: '🍃', effect: '分數+5', desc: '可以當雨傘，也能扇風。' },
-  { id: 23, name: '堅硬果殼', rarity: 'S', icon: '🥥', effect: '分數+5', desc: '可以做成樂器喔。' },
-  { id: 24, name: '彩色貝殼', rarity: 'S', icon: '🐚', effect: '分數+5', desc: '聽得到海浪的聲音。' },
-  { id: 25, name: '強韌藤蔓', rarity: 'S', icon: '➰', effect: '分數+5', desc: '非常結實，很有用處。' },
-  { id: 26, name: '石製湯匙', rarity: 'S', icon: '🥄', effect: '分數+5', desc: '喝湯更方便了。' },
-  { id: 27, name: '野果籃', rarity: 'S', icon: '🧺', effect: '分數+5', desc: '裝滿了甜甜的果實。' },
-  { id: 28, name: '鮮豔羽毛', rarity: 'S', icon: '🪶', effect: '分數+5', desc: '可以拿來做裝飾。' },
-  { id: 29, name: '螢火蟲罐', rarity: 'S', icon: '🏺', effect: '分數+5', desc: '微弱的光芒，指引方向。' },
-  { id: 30, name: '原始畫筆', rarity: 'S', icon: '🖌️', effect: '分數+5', desc: '在山洞牆壁畫畫吧！' },
+  { id: 20, name: '幸運四葉草', rarity: 'S', icon: '🍀', effect: '分數+5', desc: '找到它，考試都考100分。' },
 ];
 
-// --- 題目生成核心 ---
-const generateQuestion = (isBoss = false) => {
-  const categories = ['addition', 'multiplication', 'placeValue', 'measurement', 'logic'];
-  const type = categories[Math.floor(Math.random() * categories.length)];
+// --- V8.0 超級題庫生成器 (根據裝備數量決定難度) ---
+const generateQuestion = (isBoss, equipCount) => {
+  // 難度等級：0(沒裝備), 1(1件), 2(2件), 3(3件滿裝/魔王)
+  const difficulty = isBoss ? 3 : Math.min(equipCount, 3);
+  
+  let types = [];
+  
+  // --- Level 0: 基礎題 (適合新手) ---
+  if (difficulty === 0) {
+    types = ['add_simple', 'sub_simple', 'shape_basic', 'clock_hour'];
+  } 
+  // --- Level 1: 進階題 (有 1 件裝備) ---
+  else if (difficulty === 1) {
+    types = ['add_100', 'sub_100', 'mul_basic', 'length_cm', 'money_basic', 'clock_half'];
+  } 
+  // --- Level 2: 高手題 (有 2 件裝備) ---
+  else if (difficulty === 2) {
+    types = ['mul_advance', 'length_mix', 'fraction_basic', 'date_week', 'place_value_1000', 'money_calc'];
+  } 
+  // --- Level 3: 挑戰題 (滿裝/魔王關) ---
+  else {
+    types = ['mul_word', 'fraction_compare', 'geometry_edge', 'logic_gap', 'time_duration', 'division_concept'];
+  }
+
+  const type = types[Math.floor(Math.random() * types.length)];
 
   switch (type) {
-    case 'addition': 
-      const a1 = Math.floor(Math.random() * 50) + 10;
-      const b1 = Math.floor(Math.random() * 40) + 5;
-      return { q: `${a1} + ${b1} = ?`, a: a1 + b1, unit: '', points: 10, level: isBoss ? '魔王試煉' : '採集果實' };
-    case 'measurement': 
-      const m = Math.floor(Math.random() * 8) + 2;
-      return { q: `${m} 公尺 = 幾公分？`, a: m * 100, unit: '公分', points: 15, level: isBoss ? '魔王試煉' : '測量恐龍' };
-    case 'placeValue': 
-      const val = Math.floor(Math.random() * 900) + 100;
-      const isHundreds = Math.random() > 0.5;
-      const ansPlace = isHundreds ? Math.floor(val / 100) : Math.floor((val % 100) / 10);
-      return { q: `數字 ${val} 的${isHundreds ? '百' : '十'}位數是？`, a: ansPlace, unit: '', points: 20, level: isBoss ? '魔王試煉' : '石板密碼' };
-    case 'multiplication': 
-      const m1 = Math.floor(Math.random() * 8) + 2;
-      const m2 = Math.floor(Math.random() * 8) + 2;
-      return { q: `${m1} × ${m2} = ?`, a: m1 * m2, unit: '', points: 25, level: isBoss ? '魔王試煉' : '猛獸對決' };
-    case 'logic': 
-      const total = Math.floor(Math.random() * 20) + 10;
-      const evenTotal = total % 2 === 0 ? total : total + 1;
-      return { q: `${evenTotal} 塊肉平分給 2 人，每人拿？`, a: evenTotal / 2, unit: '塊', points: 30, level: isBoss ? '魔王試煉' : '部落分肉' };
+    // --- Lv 0 題庫 ---
+    case 'add_simple': // 20以內加法
+      const a0 = Math.floor(Math.random() * 10) + 1;
+      const b0 = Math.floor(Math.random() * 10) + 1;
+      return { q: `${a0} + ${b0} = ?`, a: a0 + b0, unit: '', points: 10, level: '採集果實 (Lv.0)' };
+    case 'sub_simple': // 20以內減法
+      const s1 = Math.floor(Math.random() * 10) + 10;
+      const s2 = Math.floor(Math.random() * 9) + 1;
+      return { q: `${s1} - ${s2} = ?`, a: s1 - s2, unit: '', points: 10, level: '驅趕小蟲 (Lv.0)' };
+    case 'shape_basic': // 形狀辨識
+      const shapes = [
+        { name: '三角形', sides: 3 }, { name: '正方形', sides: 4 }, { name: '長方形', sides: 4 }
+      ];
+      const sh = shapes[Math.floor(Math.random() * shapes.length)];
+      return { q: `${sh.name}有幾個角？`, a: sh.sides, unit: '個', points: 10, level: '石板圖形 (Lv.0)' };
+    case 'clock_hour': // 整點報時
+      const h = Math.floor(Math.random() * 12) + 1;
+      return { q: `長針指著12，短針指著${h}，是幾點？`, a: h, unit: '點', points: 10, level: '日晷時間 (Lv.0)' };
+
+    // --- Lv 1 題庫 ---
+    case 'add_100': // 100內加法
+      const a1 = Math.floor(Math.random() * 40) + 10;
+      const b1 = Math.floor(Math.random() * 40) + 10;
+      return { q: `${a1} + ${b1} = ?`, a: a1 + b1, unit: '', points: 15, level: '搬運石塊 (Lv.1)' };
+    case 'mul_basic': // 基礎乘法 (2,5,10)
+      const mBase = [2, 5, 10][Math.floor(Math.random() * 3)];
+      const mN = Math.floor(Math.random() * 9) + 1;
+      return { q: `${mBase} × ${mN} = ?`, a: mBase * mN, unit: '', points: 15, level: '基礎狩獵 (Lv.1)' };
+    case 'length_cm': // 長度直觀
+      const cm = Math.floor(Math.random() * 20) + 5;
+      return { q: `橡皮擦長 ${cm} 公分，兩塊接起來多長？`, a: cm * 2, unit: '公分', points: 15, level: '測量工具 (Lv.1)' };
+    case 'money_basic': // 錢幣算術
+      const price = Math.floor(Math.random() * 4) + 1; // 1-4個10元
+      return { q: `${price} 個 10 元硬幣是多少錢？`, a: price * 10, unit: '元', points: 15, level: '部落交易 (Lv.1)' };
+
+    // --- Lv 2 題庫 ---
+    case 'mul_advance': // 進階乘法 (3,4,6,7,8,9)
+      const ma1 = Math.floor(Math.random() * 7) + 3; // 3-9
+      const ma2 = Math.floor(Math.random() * 8) + 2;
+      return { q: `${ma1} × ${ma2} = ?`, a: ma1 * ma2, unit: '', points: 20, level: '猛獸乘法 (Lv.2)' };
+    case 'place_value_1000': // 1000以內位值
+      const pv = Math.floor(Math.random() * 800) + 100;
+      return { q: `${pv} 的百位數是多少？`, a: Math.floor(pv / 100), unit: '', points: 20, level: '長老密碼 (Lv.2)' };
+    case 'length_mix': // 公尺公分換算
+      const m_mix = Math.floor(Math.random() * 5) + 2;
+      return { q: `${m_mix} 公尺等於幾公分？`, a: m_mix * 100, unit: '公分', points: 20, level: '巨獸測量 (Lv.2)' };
+    case 'fraction_basic': // 基礎分數 (1/2, 1/4)
+      const totalF = [4, 8, 12, 16][Math.floor(Math.random() * 4)];
+      return { q: `${totalF} 顆蘋果的 二分之一 是幾顆？`, a: totalF / 2, unit: '顆', points: 20, level: '平分食物 (Lv.2)' };
+
+    // --- Lv 3 題庫 (魔王級) ---
+    case 'mul_word': // 乘法應用
+      const legs = 4;
+      const count = Math.floor(Math.random() * 5) + 4; // 4-8隻
+      return { q: `${count} 隻獅子共有幾條腿？`, a: count * legs, unit: '條', points: 30, level: '獅群來襲 (Lv.3)' };
+    case 'time_duration': // 時間經過
+      const start = Math.floor(Math.random() * 5) + 1;
+      const dur = Math.floor(Math.random() * 3) + 2;
+      return { q: `現在 ${start} 點，過 ${dur} 小時是幾點？`, a: start + dur, unit: '點', points: 30, level: '守夜時間 (Lv.3)' };
+    case 'geometry_edge': // 立體圖形邊/面
+      const solids = [
+        { n: '正方體', f: '面', a: 6 },
+        { n: '正方體', f: '邊', a: 12 },
+        { n: '正方體', f: '頂點', a: 8 }
+      ];
+      const sol = solids[Math.floor(Math.random() * solids.length)];
+      return { q: `${sol.n}有幾個${sol.f}？`, a: sol.a, unit: '個', points: 30, level: '神廟建築 (Lv.3)' };
+    case 'division_concept': // 分裝概念
+      const totalD = Math.floor(Math.random() * 5 + 2) * 6; // 12-42
+      const perBag = 6;
+      return { q: `${totalD} 個貝殼，每 ${perBag} 個裝一袋，可裝幾袋？`, a: totalD / perBag, unit: '袋', points: 30, level: '物資分配 (Lv.3)' };
+
     default:
       return { q: "10 + 10 = ?", a: 20, unit: '', points: 5, level: '熱身' };
   }
 };
 
 const MathJungleGame = () => {
-  const [currentQ, setCurrentQ] = useState(generateQuestion());
+  // --- 狀態初始化 ---
+  const [score, setScore] = useState(100); 
+  const [combo, setCombo] = useState(0);
+  const [inventory, setInventory] = useState([]); 
+  const [equippedItems, setEquippedItems] = useState([]); 
+  // 初始題目 (無魔王, 0裝備)
+  const [currentQ, setCurrentQ] = useState(generateQuestion(false, 0));
+  
   const [userInput, setUserInput] = useState('');
   const [showReward, setShowReward] = useState(false);
   const [showBossVictory, setShowBossVictory] = useState(false);
-  // --- 修正：初始石幣改為 100 ---
-  const [score, setScore] = useState(100); 
-  const [combo, setCombo] = useState(0);
-  const [msg, setMsg] = useState('Yabba Dabba Doo！');
+  const [msg, setMsg] = useState('裝備越多，挑戰越難！加油！');
   
-  // --- 狀態管理 ---
   const [view, setView] = useState('game'); 
-  const [inventory, setInventory] = useState([]); 
-  const [equippedItems, setEquippedItems] = useState([]); 
   const [gachaResult, setGachaResult] = useState(null); 
 
-  // --- 魔王關卡狀態 ---
+  // --- 魔王關狀態 ---
   const [totalSolved, setTotalSolved] = useState(0); 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 50; 
 
-  // --- SSR 效果：自動填入答案 ---
+  // --- SSR 自動解題 ---
   useEffect(() => {
     const activeSSR = equippedItems.find(id => ITEMS_DB.find(i => i.id === id).rarity === 'SSR');
     if (activeSSR) {
@@ -103,7 +160,7 @@ const MathJungleGame = () => {
     }
   }, [currentQ, equippedItems]); 
 
-  // --- 計算裝備加分 ---
+  // --- 計算加分 ---
   const getTotalBonus = () => {
     let bonus = 0;
     equippedItems.forEach(id => {
@@ -118,7 +175,6 @@ const MathJungleGame = () => {
   const checkAnswer = () => {
     const userVal = parseInt(userInput);
     if (userVal === currentQ.a) {
-      // --- 答對邏輯 ---
       const bonus = getTotalBonus();
       const finalPoints = currentQ.points + (combo * 5) + bonus;
       setScore(score + finalPoints);
@@ -127,6 +183,7 @@ const MathJungleGame = () => {
       let rewardMsg = bonus > 0 ? `(+${bonus}分)！獲得 ${finalPoints} 石幣！` : `獲得 ${finalPoints} 石幣！`;
 
       if (usedSSRId) {
+        // SSR 損壞邏輯
         const itemIndexInInv = inventory.indexOf(usedSSRId);
         if (itemIndexInInv > -1) {
           const newInv = [...inventory];
@@ -134,7 +191,7 @@ const MathJungleGame = () => {
           setInventory(newInv);
         }
         setEquippedItems(equippedItems.filter(id => id !== usedSSRId));
-        rewardMsg = `神器碎裂了... 但你答對了！`;
+        rewardMsg = `神器碎裂了... 但你贏了！`;
       }
 
       if (isBossActive) {
@@ -146,7 +203,6 @@ const MathJungleGame = () => {
           setBossStreak(0);
           setShowBossVictory(true); 
           setMsg("傳說達成！擊敗了魔王！");
-          
           const ssrItems = ITEMS_DB.filter(i => i.rarity === 'SSR');
           const rewardSSR = ssrItems[Math.floor(Math.random() * ssrItems.length)];
           setInventory(prev => [...prev, rewardSSR.id]);
@@ -170,12 +226,9 @@ const MathJungleGame = () => {
           setMsg(`答對啦！` + rewardMsg);
         }
       }
-
     } else {
-      // --- 答錯邏輯 ---
       setCombo(0);
       setUserInput('');
-      
       if (isBossActive) {
         setBossStreak(0); 
         setMsg('😱 慘了！被魔王打飛！進度歸零！(0/10)');
@@ -189,13 +242,13 @@ const MathJungleGame = () => {
     setShowReward(false);
     setShowBossVictory(false);
     setUserInput('');
-    setCurrentQ(generateQuestion(isBossActive)); 
+    // 關鍵修改：傳入目前的裝備數量來決定下一題難度
+    setCurrentQ(generateQuestion(isBossActive, equippedItems.length)); 
     if (!isBossActive && !showBossVictory) {
        setMsg('下一隻猛獸來了！小心！');
     }
   };
 
-  // --- 抽蛋邏輯 ---
   const handleGacha = () => {
     if (score < 100) {
       setMsg("石幣不夠啦！快去算數學賺錢！");
@@ -212,7 +265,6 @@ const MathJungleGame = () => {
     setGachaResult(item);
   };
 
-  // --- 裝備/卸下邏輯 ---
   const toggleEquip = (itemId) => {
     const isEquipped = equippedItems.includes(itemId);
     if (isEquipped) {
@@ -235,17 +287,14 @@ const MathJungleGame = () => {
     }
   };
 
-  // --- 渲染遊戲主畫面 ---
   const renderGame = () => {
     const hasSSR = equippedItems.some(id => ITEMS_DB.find(i => i.id === id).rarity === 'SSR');
     const totalBonus = getTotalBonus();
-    
     const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasSSR ? 'bg-purple-100 border-purple-500' : 'bg-stone-200 border-stone-700');
     const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : 'bg-orange-500 border-stone-800 hover:bg-orange-400');
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md flex flex-col items-center relative z-10">
-        
         {isBossActive && (
           <div className="w-full mb-4">
             <div className="flex justify-between items-end mb-1 px-2">
@@ -253,11 +302,7 @@ const MathJungleGame = () => {
               <span className="text-stone-600 font-bold">連擊: {bossStreak} / {BOSS_TARGET}</span>
             </div>
             <div className="w-full h-6 bg-stone-300 rounded-full border-4 border-stone-600 overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }} 
-                animate={{ width: `${(bossStreak / BOSS_TARGET) * 100}%` }}
-                className="h-full bg-red-500"
-              />
+              <motion.div initial={{ width: 0 }} animate={{ width: `${(bossStreak / BOSS_TARGET) * 100}%` }} className="h-full bg-red-500" />
             </div>
           </div>
         )}
@@ -273,50 +318,32 @@ const MathJungleGame = () => {
                 </motion.div>
               );
             })}
-            {equippedItems.length === 0 && <div className="text-stone-400 text-sm font-bold flex items-center">尚未裝備道具...</div>}
+            {equippedItems.length === 0 && <div className="text-stone-400 text-sm font-bold flex items-center">裝備越多，題目越難喔！</div>}
           </div>
         )}
 
         <div className={`w-full p-8 rounded-[2rem] border-[6px] shadow-[10px_10px_0px_0px_rgba(60,60,60,0.5)] relative transition-colors duration-500 ${bgClass}`}>
           {isBossActive && <div className="absolute inset-0 border-4 border-red-500 rounded-[1.5rem] animate-pulse pointer-events-none opacity-50"></div>}
-
           <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 bg-orange-400 text-stone-900 px-6 py-2 rounded-xl text-lg font-black border-4 border-stone-800 shadow-sm rotate-1 whitespace-nowrap">
              {currentQ.level} (+{currentQ.points}) 
           </div>
-
           <div className="mt-8 mb-8 text-center relative z-10">
-            <h2 className={`text-4xl font-black mb-2 ${isBossActive ? 'text-red-900' : 'text-stone-800'}`}>{currentQ.q}</h2>
+            <h2 className={`text-3xl font-black mb-2 leading-tight ${isBossActive ? 'text-red-900' : 'text-stone-800'}`}>{currentQ.q}</h2>
             {currentQ.unit && <p className="text-stone-500 font-bold text-lg">({currentQ.unit})</p>}
           </div>
-
           <div className="relative z-10">
-            <input
-              type="number"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              placeholder="?"
-              className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${hasSSR ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`}
-            />
+            <input type="number" value={userInput} onChange={(e) => setUserInput(e.target.value)} placeholder="?" className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${hasSSR ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} />
             {hasSSR && <div className="absolute right-4 top-6 text-2xl animate-pulse">✨</div>}
           </div>
-
-          <button
-            onClick={checkAnswer}
-            disabled={showReward || showBossVictory}
-            className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}
-          >
+          <button onClick={checkAnswer} disabled={showReward || showBossVictory} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
             {hasSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！⚔️' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)}
           </button>
         </div>
-        
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
         </p>
-
         {!isBossActive && (
-          <div className="mt-2 text-xs font-bold text-stone-400">
-            距離魔王來襲: {BOSS_TRIGGER_COUNT - (totalSolved % BOSS_TRIGGER_COUNT)} 題
-          </div>
+          <div className="mt-2 text-xs font-bold text-stone-400">距離魔王來襲: {BOSS_TRIGGER_COUNT - (totalSolved % BOSS_TRIGGER_COUNT)} 題</div>
         )}
       </motion.div>
     );
@@ -396,14 +423,10 @@ const MathJungleGame = () => {
 
   return (
     <div className={`min-h-screen flex flex-col items-center justify-center p-4 font-mono overflow-hidden relative selection:bg-orange-300 transition-colors duration-1000 ${isBossActive ? 'bg-red-950' : 'bg-amber-100'}`}>
-      
       <div className="absolute top-10 left-10 text-6xl opacity-40 animate-bounce duration-[3000ms]">{isBossActive ? '🌋' : '☁️'}</div>
       <div className="absolute bottom-20 right-10 text-8xl opacity-20 -rotate-12 select-none">{isBossActive ? '🦖' : '🦕'}</div>
-
       <div className="w-full max-w-lg flex justify-between items-center mb-6 z-20 px-2">
-        <div className="bg-stone-800 text-yellow-400 px-4 py-2 rounded-xl border-4 border-stone-600 shadow-md font-black text-xl flex items-center gap-2">
-          💰 {score}
-        </div>
+        <div className="bg-stone-800 text-yellow-400 px-4 py-2 rounded-xl border-4 border-stone-600 shadow-md font-black text-xl flex items-center gap-2">💰 {score}</div>
         <div className="flex gap-2">
           <button onClick={() => setView('gacha')} disabled={isBossActive} className={`text-white px-3 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-green-600 border-green-800'}`}>🥚 抽蛋</button>
           <button onClick={() => setView('bag')} disabled={isBossActive} className={`text-white px-3 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-blue-600 border-blue-800'}`}>
@@ -412,11 +435,10 @@ const MathJungleGame = () => {
           </button>
         </div>
       </div>
-
       {view === 'game' && renderGame()}
       {view === 'gacha' && renderGacha()}
       {view === 'bag' && renderBag()}
-
+      
       <AnimatePresence>
         {showReward && !isBossActive && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -429,7 +451,6 @@ const MathJungleGame = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
       <AnimatePresence>
         {showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
@@ -447,16 +468,7 @@ const MathJungleGame = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      
-      {isBossActive && showReward && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-          <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.8 }} className="text-9xl font-black text-green-400 drop-shadow-lg">
-            HIT!
-          </motion.div>
-        </div>
-      )}
-
-      <div className="fixed bottom-2 right-2 text-stone-400 text-xs font-bold opacity-50">Math Flintstones v7.1 Economy Patch</div>
+      <div className="fixed bottom-2 right-2 text-stone-400 text-xs font-bold opacity-50">Math Flintstones v8.0 Difficulty Patch</div>
     </div>
   );
 };
