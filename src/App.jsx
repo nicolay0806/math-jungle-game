@@ -44,8 +44,8 @@ const SETS_DB = [
   { name: '狩獵王套裝', ids: [6, 7, 15], bonus: 50, desc: '集齊狩獵三寶，攻擊力提升！' },
   { name: '大祭司套裝', ids: [10, 13, 14], bonus: 50, desc: '獲得祖靈的智慧，加成爆表！' },
   { name: '快樂野餐套裝', ids: [16, 26, 27], bonus: 30, desc: '吃飽喝足，算術更有精神！' },
-  { name: '滅世霸王套裝', ids: [31, 32, 33], bonus: 100, desc: '【魔王專屬】集齊霸王三寶，震撼叢林！' },
-  { name: '星空神話套裝', ids: [34, 35, 36], bonus: 100, desc: '【魔王專屬】集齊星空三寶，宇宙加持！' }
+  { name: '滅世霸王套裝', ids: [31, 32, 33], bonus: 100, desc: '集齊霸王三寶，震撼叢林！' },
+  { name: '星空神話套裝', ids: [34, 35, 36], bonus: 100, desc: '集齊星空三寶，宇宙加持！' }
 ];
 
 const generateQuestion = (isBoss, equipCount) => {
@@ -132,11 +132,24 @@ const generateQuestion = (isBoss, equipCount) => {
   }
 };
 
+// 提取本機記憶的輔助函式
+const getSavedState = (key, defaultValue) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    return defaultValue;
+  }
+};
+
 const MathJungleGame = () => {
-  const [score, setScore] = useState(100); 
+  // --- 狀態初始化改為讀取本機記憶 ---
+  const [score, setScore] = useState(() => getSavedState('mathJungle_score', 100)); 
   const [combo, setCombo] = useState(0);
-  const [inventory, setInventory] = useState([]); 
-  const [equippedItems, setEquippedItems] = useState([]); 
+  const [inventory, setInventory] = useState(() => getSavedState('mathJungle_inventory', [])); 
+  const [equippedItems, setEquippedItems] = useState(() => getSavedState('mathJungle_equippedItems', [])); 
+  const [totalSolved, setTotalSolved] = useState(() => getSavedState('mathJungle_totalSolved', 0)); 
+  
   const [userInput, setUserInput] = useState('');
   const [showReward, setShowReward] = useState(false);
   const [showBossVictory, setShowBossVictory] = useState(false);
@@ -147,11 +160,25 @@ const MathJungleGame = () => {
   const [questionHistory, setQuestionHistory] = useState([]);
   const [currentQ, setCurrentQ] = useState({ q: '準備開始！', a: 0, unit: '', points: 0, level: '' });
 
-  const [totalSolved, setTotalSolved] = useState(0); 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 30;
+
+  // --- 自動存檔機制 ---
+  useEffect(() => {
+    localStorage.setItem('mathJungle_score', JSON.stringify(score));
+    localStorage.setItem('mathJungle_inventory', JSON.stringify(inventory));
+    localStorage.setItem('mathJungle_equippedItems', JSON.stringify(equippedItems));
+    localStorage.setItem('mathJungle_totalSolved', JSON.stringify(totalSolved));
+  }, [score, inventory, equippedItems, totalSolved]);
+
+  const resetProgress = () => {
+    if (window.confirm('確定要刪除所有進度，重新開始嗎？這個動作無法復原喔！')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
 
   useEffect(() => {
     generateUniqueQuestion(false);
@@ -173,7 +200,6 @@ const MathJungleGame = () => {
     setCurrentQ(newQ);
   };
 
-  // 防偷吃步：只要裝備了消耗品，就清空輸入框並提示準備就緒，不再偷洩題
   useEffect(() => {
     const activeConsumableSSR = equippedItems.find(id => {
       const item = ITEMS_DB.find(i => i.id === id);
@@ -215,14 +241,12 @@ const MathJungleGame = () => {
     const userVal = parseInt(userInput);
     let isCorrect = false;
 
-    // 只要有裝消耗品，就算答對；否則看輸入是否正確
     if (usedConsumableId || userVal === currentQ.a) {
       isCorrect = true;
     }
 
     if (isCorrect) {
       if (usedConsumableId) {
-        // 解放神力時，把答案自動顯示出來讓他看
         setUserInput(currentQ.a);
       }
 
@@ -300,7 +324,7 @@ const MathJungleGame = () => {
         if (newTotal > 0 && newTotal % BOSS_TRIGGER_COUNT === 0) {
           setIsBossActive(true);
           setBossStreak(0);
-          setMsg("⚠️ 警告！暴龍王出現了！ ⚠️");
+          setMsg("警告！暴龍王出現了！");
           setUserInput('');
           generateUniqueQuestion(true); 
         } else {
@@ -313,7 +337,7 @@ const MathJungleGame = () => {
       setUserInput('');
       if (isBossActive) {
         setBossStreak(0); 
-        setMsg('😱 慘了！被魔王打飛！進度歸零！(0/10)');
+        setMsg('慘了！被魔王打飛！進度歸零！(0/10)');
       } else {
         setMsg('哎呀！被石頭絆倒了，再試一次！');
       }
@@ -486,8 +510,11 @@ const MathJungleGame = () => {
           <span>部落背包</span>
           <div className="text-sm bg-stone-800 text-white px-3 py-1 rounded-lg">裝備: {equippedItems.length}/3</div>
         </h2>
-        <button onClick={() => setView('game')} className="text-stone-500 font-bold underline mb-4 self-end">回到遊戲</button>
-        <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+        <div className="flex justify-between w-full mb-4">
+          <button onClick={resetProgress} className="text-red-500 font-bold underline">刪除存檔重玩</button>
+          <button onClick={() => setView('game')} className="text-stone-500 font-bold underline">回到遊戲</button>
+        </div>
+        <div className="flex-1 overflow-y-auto pr-2 space-y-3 w-full">
           {uniqueItems.length === 0 ? (
             <div className="text-center text-stone-400 mt-20">背包空空的...<br/>快去抽蛋！</div>
           ) : (
