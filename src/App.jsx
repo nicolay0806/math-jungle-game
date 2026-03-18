@@ -2,14 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ITEMS_DB = [
-  // --- SSR (傳說級) ---
   { id: 1, name: '暴龍透視鏡', rarity: 'SSR', icon: '🦖', effect: '看穿答案 (消耗)', desc: '一次性神器，使用後消失。', source: 'gacha', type: 'consumable' },
   { id: 2, name: '先知的石板', rarity: 'SSR', icon: '🗿', effect: '看穿答案 (消耗)', desc: '上面刻著正解，用完會風化。', source: 'gacha', type: 'consumable' },
   { id: 3, name: '黃金計算機', rarity: 'SSR', icon: '🧮', effect: '看穿答案 (消耗)', desc: '古文明科技，電力僅供一次。', source: 'gacha', type: 'consumable' },
   { id: 4, name: '智慧長老之靈', rarity: 'SSR', icon: '👻', effect: '看穿答案 (消耗)', desc: '召喚長老代答，之後需休息。', source: 'gacha', type: 'consumable' },
   { id: 5, name: '外星人頭盔', rarity: 'SSR', icon: '👽', effect: '看穿答案 (消耗)', desc: '接收宇宙訊號，用過即丟。', source: 'gacha', type: 'consumable' },
   
-  // --- SSR (魔王專屬) ---
   { id: 31, name: '滅世霸王牙', rarity: 'SSR', icon: '🦷', effect: '分數+20', desc: '魔王掉落。【霸王套裝A】', source: 'boss', type: 'equip' },
   { id: 32, name: '滅世霸王鱗', rarity: 'SSR', icon: '🛡️', effect: '分數+20', desc: '魔王掉落。【霸王套裝B】', source: 'boss', type: 'equip' },
   { id: 33, name: '滅世霸王角', rarity: 'SSR', icon: '🦏', effect: '分數+20', desc: '魔王掉落。【霸王套裝C】', source: 'boss', type: 'equip' },
@@ -17,16 +15,14 @@ const ITEMS_DB = [
   { id: 35, name: '星空神明眼', rarity: 'SSR', icon: '👁️', effect: '分數+20', desc: '魔王掉落。【星空套裝B】', source: 'boss', type: 'equip' },
   { id: 36, name: '星空時空鐘', rarity: 'SSR', icon: '⏳', effect: '分數+20', desc: '魔王掉落。【星空套裝C】', source: 'boss', type: 'equip' },
 
-  // --- 寵物蛋 (抽蛋機取得) ---
   { id: 41, name: '綠色斑點蛋', rarity: 'PET', icon: '🦕', effect: '可孵化', desc: '裡面好像是三角龍？', source: 'gacha', type: 'pet_egg', petType: 'triceratops' },
   { id: 42, name: '紅色條紋蛋', rarity: 'PET', icon: '🦖', effect: '可孵化', desc: '裡面好像是小暴龍？', source: 'gacha', type: 'pet_egg', petType: 'trex' },
   { id: 43, name: '毛茸茸的球', rarity: 'PET', icon: '🐯', effect: '可孵化', desc: '裡面好像是劍齒虎？', source: 'gacha', type: 'pet_egg', petType: 'tiger' },
 
-  // --- SR (稀有級) ---
   { id: 6, name: '黑曜石矛', rarity: 'SR', icon: '🗡️', effect: '分數+10', desc: '鋒利無比。 【狩獵套裝A】', source: 'gacha', type: 'equip' },
   { id: 7, name: '劍齒虎皮', rarity: 'SR', icon: '🐯', effect: '分數+10', desc: '充滿勇氣。 【狩獵套裝B】', source: 'gacha', type: 'equip' },
   { id: 8, name: '琥珀項鍊', rarity: 'SR', icon: '📿', effect: '分數+10', desc: '凝結時間。', source: 'gacha', type: 'equip' },
-  { id: 9, name: '雷龍蛋', rarity: 'SR', icon: '🥚', effect: '分數+10', desc: '充滿生命力的大蛋。', source: 'gacha', type: 'equip' },
+  { id: 9, name: '雷龍蛋', rarity: 'SR', icon: '🥚', effect: '分數+10', desc: '充滿生命力。', source: 'gacha', type: 'equip' },
   { id: 10, name: '薩滿面具', rarity: 'SR', icon: '👺', effect: '分數+10', desc: '通靈智慧。 【祭司套裝A】', source: 'gacha', type: 'equip' },
   { id: 11, name: '巨大烤腿肉', rarity: 'SR', icon: '🍖', effect: '分數+10', desc: '吃飽有力氣。', source: 'gacha', type: 'equip' },
   { id: 12, name: '精緻石輪', rarity: 'SR', icon: '⚙️', effect: '分數+10', desc: '科技起點。', source: 'gacha', type: 'equip' },
@@ -34,7 +30,6 @@ const ITEMS_DB = [
   { id: 14, name: '部落號角', rarity: 'SR', icon: '📯', effect: '分數+10', desc: '吹響勝利。 【祭司套裝C】', source: 'gacha', type: 'equip' },
   { id: 15, name: '獸骨迴力鏢', rarity: 'SR', icon: '🪃', effect: '分數+10', desc: '百發百中。 【狩獵套裝C】', source: 'gacha', type: 'equip' },
   
-  // --- S (實用級) - 加入 isFood 標籤 ---
   { id: 16, name: '堅固石碗', rarity: 'S', icon: '🥣', effect: '分數+5', desc: '磨得光滑。 【野餐套裝A】', source: 'gacha', type: 'equip' },
   { id: 17, name: '美味烤魚', rarity: 'S', icon: '🐟', effect: '分數+5', desc: '可以拿來餵寵物。', source: 'gacha', type: 'equip', isFood: true },
   { id: 18, name: '乾燥木柴', rarity: 'S', icon: '🪵', effect: '分數+5', desc: '生火必備。', source: 'gacha', type: 'equip' },
@@ -53,14 +48,24 @@ const SETS_DB = [
   { name: '狩獵王套裝', ids: [6, 7, 15], bonus: 50, desc: '集齊狩獵三寶，攻擊力提升！' },
   { name: '大祭司套裝', ids: [10, 13, 14], bonus: 50, desc: '獲得祖靈的智慧，加成爆表！' },
   { name: '快樂野餐套裝', ids: [16, 26, 27], bonus: 30, desc: '吃飽喝足，算術更有精神！' },
-  { name: '滅世霸王套裝', ids: [31, 32, 33], bonus: 100, desc: '集齊霸王三寶，震撼叢林！' },
-  { name: '星空神話套裝', ids: [34, 35, 36], bonus: 100, desc: '集齊星空三寶，宇宙加持！' }
+  { name: '滅世霸王套裝', ids: [31, 32, 33], bonus: 100, desc: '【魔王專屬】集齊霸王三寶，震撼叢林！' },
+  { name: '星空神話套裝', ids: [34, 35, 36], bonus: 100, desc: '【魔王專屬】集齊星空三寶，宇宙加持！' }
 ];
 
 const PET_DATA = {
   triceratops: { name: '三角龍', icon1: '🥚', icon2: '🦎', icon3: '🦕' },
   trex: { name: '暴龍', icon1: '🥚', icon2: '🦎', icon3: '🦖' },
   tiger: { name: '劍齒虎', icon1: '🧶', icon2: '🐱', icon3: '🐯' }
+};
+
+const ACTIVITY_TEXT = {
+  idle: '正在發呆...',
+  sleeping: '呼呼大睡中...',
+  wandering: '到處亂晃找東西...',
+  happy: '心情超級好！',
+  eating: '大口吃著食物！',
+  playing: '玩得非常瘋！',
+  bathing: '享受洗澡中，香噴噴～'
 };
 
 const generateQuestion = (isBoss, equipCount) => {
@@ -166,7 +171,7 @@ const MathJungleGame = () => {
   const [inventory, setInventory] = useState(() => getSavedState('mathJungle_inventory', [])); 
   const [equippedItems, setEquippedItems] = useState(() => getSavedState('mathJungle_equippedItems', [])); 
   const [totalSolved, setTotalSolved] = useState(() => getSavedState('mathJungle_totalSolved', 0)); 
-  const [pets, setPets] = useState(() => getSavedState('mathJungle_pets', [])); // 寵物進度存檔
+  const [pets, setPets] = useState(() => getSavedState('mathJungle_pets', [])); 
   
   const [userInput, setUserInput] = useState('');
   const [showReward, setShowReward] = useState(false);
@@ -177,6 +182,7 @@ const MathJungleGame = () => {
   const [gachaResult, setGachaResult] = useState(null); 
   const [questionHistory, setQuestionHistory] = useState([]);
   const [currentQ, setCurrentQ] = useState({ q: '準備開始！', a: 0, unit: '', points: 0, level: '' });
+  const [petAssist, setPetAssist] = useState(null); // 紀錄是否有寵物出來幫忙
 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
@@ -198,6 +204,18 @@ const MathJungleGame = () => {
     }
   };
 
+  // 寵物作息系統：每 10 秒隨機改變寵物狀態
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPets(prevPets => prevPets.map(pet => {
+        const acts = ['idle', 'sleeping', 'wandering', 'happy'];
+        const randomAct = acts[Math.floor(Math.random() * acts.length)];
+        return { ...pet, activity: pet.activity === 'eating' || pet.activity === 'playing' || pet.activity === 'bathing' ? randomAct : randomAct };
+      }));
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     generateUniqueQuestion(false);
   }, []);
@@ -216,6 +234,15 @@ const MathJungleGame = () => {
       return newHistory;
     });
     setCurrentQ(newQ);
+    
+    // 重置寵物幫忙狀態
+    setPetAssist(null);
+
+    // 檢查是否有滿等滿友好度的寵物可以幫忙 (15%機率)
+    const maxedPets = pets.filter(p => p.stage === 3 && (p.friendship || 0) >= 100);
+    if (maxedPets.length > 0 && Math.random() < 0.15) {
+        setPetAssist(maxedPets[0]);
+    }
   };
 
   useEffect(() => {
@@ -227,15 +254,17 @@ const MathJungleGame = () => {
     if (activeConsumableSSR) {
       setUserInput('');
       setMsg(`神力準備就緒！請直接點擊解放神力！`);
+    } else if (petAssist) {
+      setUserInput('');
+      setMsg(`你的寵物 ${PET_DATA[petAssist.type].name} 衝出來想幫忙！點擊讓牠解答！`);
     }
-  }, [equippedItems]);
+  }, [equippedItems, petAssist]);
 
   const calculatePoints = () => {
     let itemBonus = 0;
     let setBonus = 0;
     let activeSetNames = [];
     
-    // 裝備加成
     equippedItems.forEach(id => {
       const item = ITEMS_DB.find(i => i.id === id);
       if (item.rarity === 'SSR' && item.type === 'equip') itemBonus += 20; 
@@ -243,7 +272,6 @@ const MathJungleGame = () => {
       if (item.rarity === 'S') itemBonus += 5;
     });
 
-    // 套裝加成
     SETS_DB.forEach(set => {
       if (set.ids.every(reqId => equippedItems.includes(reqId))) {
         setBonus += set.bonus;
@@ -251,7 +279,6 @@ const MathJungleGame = () => {
       }
     });
 
-    // 寵物完全體常駐加成 (每隻+10)
     let petBonus = 0;
     pets.forEach(pet => {
       if (pet.stage === 3) petBonus += 10;
@@ -270,12 +297,12 @@ const MathJungleGame = () => {
     const userVal = parseInt(userInput);
     let isCorrect = false;
 
-    if (usedConsumableId || userVal === currentQ.a) {
+    if (usedConsumableId || userVal === currentQ.a || petAssist) {
       isCorrect = true;
     }
 
     if (isCorrect) {
-      if (usedConsumableId) {
+      if (usedConsumableId || petAssist) {
         setUserInput(currentQ.a);
       }
 
@@ -298,6 +325,8 @@ const MathJungleGame = () => {
         }
         currentEquip = currentEquip.filter(id => id !== usedConsumableId);
         detailMsg = `神器碎裂了... 原來答案是 ${currentQ.a}！`;
+      } else if (petAssist) {
+        detailMsg = `${PET_DATA[petAssist.type].name} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
       }
 
       let bossCounterMsg = '';
@@ -378,6 +407,7 @@ const MathJungleGame = () => {
     setShowReward(false);
     setShowBossVictory(false);
     setBossRewardItem(null); 
+    setPetAssist(null);
     setUserInput('');
     generateUniqueQuestion(isBossActive); 
     if (!isBossActive && !showBossVictory) {
@@ -396,7 +426,6 @@ const MathJungleGame = () => {
     const rand = Math.random() * 100;
     let rarity = 'S';
     
-    // 機率調整：新增10%寵物機率
     if (rand < 5) rarity = 'SSR';
     else if (rand < 15) rarity = 'PET';
     else if (rand < 35) rarity = 'SR';
@@ -404,9 +433,8 @@ const MathJungleGame = () => {
     const pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
     const item = pool[Math.floor(Math.random() * pool.length)];
     
-    // 若抽到寵物，新增至 pets 陣列中
     if (rarity === 'PET') {
-      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0 };
+      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendship: 0, activity: 'idle' };
       setPets(prev => [...prev, newPet]);
     } else {
       setInventory([...inventory, item.id]); 
@@ -437,25 +465,34 @@ const MathJungleGame = () => {
     }
   };
 
-  // 餵養邏輯
+  const interactPet = (petInstanceId, actionType) => {
+    setPets(prevPets => prevPets.map(pet => {
+      if (pet.instanceId === petInstanceId) {
+        const boost = 10;
+        const act = actionType === 'play' ? 'playing' : 'bathing';
+        return { ...pet, friendship: Math.min(100, (pet.friendship || 0) + boost), activity: act };
+      }
+      return pet;
+    }));
+  };
+
   const feedPet = (petInstanceId, foodId) => {
-    // 扣除食物
     const invIndex = inventory.indexOf(foodId);
     if (invIndex > -1) {
       const newInv = [...inventory];
       newInv.splice(invIndex, 1);
       setInventory(newInv);
       
-      // 更新寵物狀態
       setPets(prevPets => prevPets.map(pet => {
         if (pet.instanceId === petInstanceId) {
           const newFedCount = pet.fedCount + 1;
           let newStage = pet.stage;
-          // 進化條件：吃滿3個變2階，吃滿8個變3階
-          if (newFedCount >= 8) newStage = 3;
-          else if (newFedCount >= 3) newStage = 2;
+          // 提高門檻：10次二階，30次滿階
+          if (newFedCount >= 30) newStage = 3;
+          else if (newFedCount >= 10) newStage = 2;
           
-          return { ...pet, fedCount: newFedCount, stage: newStage };
+          const newFriendship = Math.min(100, (pet.friendship || 0) + 5);
+          return { ...pet, fedCount: newFedCount, stage: newStage, friendship: newFriendship, activity: 'eating' };
         }
         return pet;
       }));
@@ -471,8 +508,9 @@ const MathJungleGame = () => {
     const { itemBonus, setBonus, activeSetNames } = calculatePoints();
     const totalBonus = itemBonus + setBonus;
     
-    const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasConsumableSSR ? 'bg-purple-100 border-purple-500' : 'bg-stone-200 border-stone-700');
-    const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : 'bg-orange-500 border-stone-800 hover:bg-orange-400');
+    // 優先判定是否有寵物出來幫忙，畫面會呈現黃色特效
+    const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasConsumableSSR ? 'bg-purple-100 border-purple-500' : (petAssist ? 'bg-yellow-100 border-yellow-500' : 'bg-stone-200 border-stone-700'));
+    const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : (petAssist ? 'bg-yellow-500 border-yellow-800 hover:bg-yellow-400 text-stone-900' : 'bg-orange-500 border-stone-800 hover:bg-orange-400'));
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md flex flex-col items-center relative z-10">
@@ -510,7 +548,8 @@ const MathJungleGame = () => {
                 </motion.div>
               );
             })}
-            {equippedItems.length === 0 && <div className="text-stone-400 text-sm font-bold flex items-center">裝備越多，題目越難喔！</div>}
+            {equippedItems.length === 0 && !petAssist && <div className="text-stone-400 text-sm font-bold flex items-center">裝備越多，題目越難喔！</div>}
+            {petAssist && <div className="text-yellow-600 text-sm font-black flex items-center animate-pulse">滿分好友來幫忙啦！</div>}
           </div>
         )}
 
@@ -528,13 +567,13 @@ const MathJungleGame = () => {
               type="number" 
               value={userInput} 
               onChange={(e) => setUserInput(e.target.value)} 
-              readOnly={hasConsumableSSR}
-              placeholder={hasConsumableSSR ? "神力鎖定" : "?"} 
-              className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${hasConsumableSSR ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
+              readOnly={hasConsumableSSR || petAssist}
+              placeholder={hasConsumableSSR || petAssist ? "鎖定中" : "?"} 
+              className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
             />
           </div>
           <button onClick={checkAnswer} disabled={showReward || showBossVictory} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
-            {hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)}
+            {petAssist ? '讓寵物解題！' : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
           </button>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
@@ -632,7 +671,6 @@ const MathJungleGame = () => {
   };
 
   const renderPetRoom = () => {
-    // 找出背包裡所有可以用來當食物的道具
     const availableFoods = [...new Set(inventory)].filter(id => {
       const item = ITEMS_DB.find(i => i.id === id);
       return item && item.isFood;
@@ -641,7 +679,7 @@ const MathJungleGame = () => {
     return (
       <motion.div initial={{ y: 50 }} animate={{ y: 0 }} className="w-full max-w-md bg-green-100 p-6 rounded-3xl border-8 border-green-800 h-[70vh] flex flex-col z-10">
         <h2 className="text-2xl font-black text-green-900 mb-2 flex justify-between items-center">
-          <span>寵物園</span>
+          <span>部落寵物園</span>
           <button onClick={() => setView('game')} className="text-stone-500 font-bold underline text-sm">回到遊戲</button>
         </h2>
         
@@ -670,43 +708,60 @@ const MathJungleGame = () => {
               const petData = PET_DATA[pet.type];
               const petIcon = pet.stage === 1 ? petData.icon1 : pet.stage === 2 ? petData.icon2 : petData.icon3;
               const stageLabel = pet.stage === 1 ? '幼體' : pet.stage === 2 ? '成長期' : '完全體';
-              const nextStageReq = pet.stage === 1 ? 3 : pet.stage === 2 ? 8 : 'MAX';
+              const nextStageReq = pet.stage === 1 ? 10 : pet.stage === 2 ? 30 : 'MAX';
+              const currentFriendship = pet.friendship || 0;
+              const statusText = ACTIVITY_TEXT[pet.activity || 'idle'];
               
               return (
                 <div key={pet.instanceId} className="bg-white p-4 rounded-2xl border-4 border-green-600 shadow-md relative">
                   {pet.stage === 3 && <div className="absolute -top-3 -right-3 bg-yellow-400 text-red-700 font-black text-xs px-2 py-1 rounded-full transform rotate-12 border-2 border-red-700">常駐+10分</div>}
+                  
+                  <div className="text-xs font-bold text-blue-600 mb-2 bg-blue-50 inline-block px-2 py-1 rounded">狀態: {statusText}</div>
+
                   <div className="flex items-center gap-4">
                     <div className={`flex items-center justify-center bg-green-50 rounded-full border-4 border-green-300 ${pet.stage === 3 ? 'w-20 h-20 text-6xl' : 'w-16 h-16 text-4xl'}`}>
                       {petIcon}
                     </div>
                     <div className="flex-1">
                       <div className="font-black text-lg text-green-900">{petData.name} <span className="text-xs text-stone-500 font-normal">({stageLabel})</span></div>
-                      <div className="w-full bg-stone-200 h-3 rounded-full mt-2 overflow-hidden border border-stone-300">
-                        <div 
-                          className="bg-green-500 h-full transition-all" 
-                          style={{ width: pet.stage === 3 ? '100%' : `${(pet.fedCount / nextStageReq) * 100}%` }}
-                        ></div>
+                      
+                      <div className="mt-1 flex items-center justify-between text-xs font-bold text-stone-500">
+                        <span>成長度</span>
+                        <span>{pet.stage === 3 ? 'MAX' : `${pet.fedCount} / ${nextStageReq}`}</span>
                       </div>
-                      <div className="text-xs text-stone-500 mt-1 font-bold">
-                        {pet.stage === 3 ? '已達到完全體！' : `成長度: ${pet.fedCount} / ${nextStageReq}`}
+                      <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden border border-stone-300 mb-1">
+                        <div className="bg-green-500 h-full transition-all" style={{ width: pet.stage === 3 ? '100%' : `${(pet.fedCount / nextStageReq) * 100}%` }}></div>
+                      </div>
+
+                      <div className="mt-1 flex items-center justify-between text-xs font-bold text-stone-500">
+                        <span>友好度</span>
+                        <span className={currentFriendship === 100 ? 'text-pink-500' : ''}>{currentFriendship} / 100</span>
+                      </div>
+                      <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden border border-stone-300">
+                        <div className="bg-pink-400 h-full transition-all" style={{ width: `${currentFriendship}%` }}></div>
                       </div>
                     </div>
                   </div>
                   
-                  {pet.stage < 3 && availableFoods.length > 0 && (
-                    <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                      {availableFoods.map(foodId => {
-                        const item = ITEMS_DB.find(i => i.id === foodId);
-                        return (
-                          <button 
-                            key={foodId}
-                            onClick={() => feedPet(pet.instanceId, foodId)}
-                            className="bg-orange-100 hover:bg-orange-200 border-2 border-orange-400 text-orange-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap"
-                          >
-                            餵食 {item.icon}
-                          </button>
-                        );
-                      })}
+                  <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                    <button onClick={() => interactPet(pet.instanceId, 'play')} className="bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
+                      陪玩
+                    </button>
+                    <button onClick={() => interactPet(pet.instanceId, 'bathe')} className="bg-cyan-100 hover:bg-cyan-200 border-2 border-cyan-400 text-cyan-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
+                      洗澡
+                    </button>
+                    {pet.stage < 3 && availableFoods.map(foodId => {
+                      const item = ITEMS_DB.find(i => i.id === foodId);
+                      return (
+                        <button key={foodId} onClick={() => feedPet(pet.instanceId, foodId)} className="bg-orange-100 hover:bg-orange-200 border-2 border-orange-400 text-orange-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
+                          餵食 {item.icon}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {pet.stage === 3 && currentFriendship === 100 && (
+                    <div className="mt-2 text-xs font-bold text-center text-pink-600 bg-pink-50 py-1 rounded">
+                      這隻寵物非常愛你！解題時可能會跑出來幫忙喔！
                     </div>
                   )}
                 </div>
@@ -725,7 +780,7 @@ const MathJungleGame = () => {
         <div className="flex gap-2">
           <button onClick={() => setView('pet')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-orange-500 border-orange-700'}`}>
             寵物
-            {pets.some(p => p.stage === 3) && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span></span>}
+            {pets.some(p => p.stage === 3 && p.friendship === 100) && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span></span>}
           </button>
           <button onClick={() => setView('gacha')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-green-600 border-green-800'}`}> 抽蛋</button>
           <button onClick={() => setView('bag')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-blue-600 border-blue-800'}`}>
