@@ -55,7 +55,8 @@ const generateQuestion = (isBoss, equipCount) => {
   if (difficulty <= 1) { 
     types = ['add_2digit', 'sub_2digit', 'mul_basic', 'money_basic'];
   } else if (difficulty <= 3) { 
-    types = ['add_3digit', 'sub_borrow', 'mul_advance', 'length_calc', 'place_value_adv'];
+    // 加入 estimate_ten (大約/估算) 題型
+    types = ['add_3digit', 'sub_borrow', 'mul_advance', 'length_calc', 'place_value_adv', 'estimate_ten'];
   } else { 
     types = ['add_mix_3', 'sub_big', 'mul_2d_1d', 'div_basic', 'time_elapse_hard', 'mix_op'];
   }
@@ -100,6 +101,14 @@ const generateQuestion = (isBoss, equipCount) => {
       const digit = Math.random() > 0.5 ? '百' : '十';
       const ans = digit === '百' ? Math.floor(pv / 100) : Math.floor((pv % 100) / 10);
       return { q: `${pv} 的${digit}位數是多少？`, a: ans, unit: '', points: 25, level: '長老密碼 (Lv.3)' };
+    
+    // --- 新增：估算題型 ---
+    case 'estimate_ten':
+      const estNum = Math.floor(Math.random() * 80) + 11; 
+      const remainder = estNum % 10;
+      const estAns = remainder >= 5 ? estNum - remainder + 10 : estNum - remainder;
+      return { q: `${estNum} 大約是幾十？`, a: estAns, unit: '', points: 25, level: '直覺估算 (Lv.3)' };
+
     case 'add_mix_3': 
       const n1 = Math.floor(Math.random() * 50) + 10;
       const n2 = Math.floor(Math.random() * 50) + 10;
@@ -132,7 +141,6 @@ const generateQuestion = (isBoss, equipCount) => {
   }
 };
 
-// 提取本機記憶的輔助函式
 const getSavedState = (key, defaultValue) => {
   try {
     const item = localStorage.getItem(key);
@@ -143,7 +151,6 @@ const getSavedState = (key, defaultValue) => {
 };
 
 const MathJungleGame = () => {
-  // --- 狀態初始化改為讀取本機記憶 ---
   const [score, setScore] = useState(() => getSavedState('mathJungle_score', 100)); 
   const [combo, setCombo] = useState(0);
   const [inventory, setInventory] = useState(() => getSavedState('mathJungle_inventory', [])); 
@@ -165,7 +172,6 @@ const MathJungleGame = () => {
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 30;
 
-  // --- 自動存檔機制 ---
   useEffect(() => {
     localStorage.setItem('mathJungle_score', JSON.stringify(score));
     localStorage.setItem('mathJungle_inventory', JSON.stringify(inventory));
