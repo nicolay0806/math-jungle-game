@@ -53,9 +53,9 @@ const SETS_DB = [
 ];
 
 const PET_DATA = {
-  triceratops: { name: '三角龍', icon1: '🥚', icon2: '🦎', icon3: '🦕' },
-  trex: { name: '暴龍', icon1: '🥚', icon2: '🦎', icon3: '🦖' },
-  tiger: { name: '劍齒虎', icon1: '🧶', icon2: '🐱', icon3: '🐯' }
+  triceratops: { speciesName: '三角龍', icon1: '🥚', icon2: '🦎', icon3: '🦕' },
+  trex: { speciesName: '暴龍', icon1: '🥚', icon2: '🦎', icon3: '🦖' },
+  tiger: { speciesName: '劍齒虎', icon1: '🧶', icon2: '🐱', icon3: '🐯' }
 };
 
 const ACTIVITY_TEXT = {
@@ -169,6 +169,23 @@ const getSavedState = (key, defaultValue) => {
   }
 };
 
+// 友好度計算函式
+const processFriendshipGain = (pet, expGained) => {
+  let currentLevel = pet.friendshipLevel || 0;
+  let currentExp = pet.friendshipExp !== undefined ? pet.friendshipExp : (pet.friendship || 0); // 舊版相容
+  
+  currentExp += expGained;
+  let reqExp = 100 + (currentLevel * 50); // 每升一級，需要的經驗值遞增50
+
+  while (currentExp >= reqExp) {
+    currentLevel++;
+    currentExp -= reqExp;
+    reqExp = 100 + (currentLevel * 50);
+  }
+
+  return { ...pet, friendshipLevel: currentLevel, friendshipExp: currentExp };
+};
+
 const MathJungleGame = () => {
   const [score, setScore] = useState(() => getSavedState('mathJungle_score', 100)); 
   const [combo, setCombo] = useState(0);
@@ -240,9 +257,17 @@ const MathJungleGame = () => {
     setCurrentQ(newQ);
     
     setPetAssist(null);
-    const maxedPets = pets.filter(p => p.stage === 3 && (p.friendship || 0) >= 100);
-    if (maxedPets.length > 0 && Math.random() < 0.15) {
-        setPetAssist(maxedPets[0]);
+    
+    // 助攻機制：必須滿階段，且友好等級 >= 1
+    const capablePets = pets.filter(p => p.stage === 3 && (p.friendshipLevel || 0) >= 1);
+    if (capablePets.length > 0) {
+        // 挑出等級最高的寵物
+        const bestPet = capablePets.reduce((prev, curr) => (prev.friendshipLevel > curr.friendshipLevel) ? prev : curr);
+        // 基礎機率 10%，每 1 級多 2%，最高 50%
+        const chance = Math.min(0.10 + (bestPet.friendshipLevel * 0.02), 0.50);
+        if (Math.random() < chance) {
+            setPetAssist(bestPet);
+        }
     }
   };
 
@@ -257,7 +282,7 @@ const MathJungleGame = () => {
       setMsg(`神力準備就緒！請直接點擊解放神力！`);
     } else if (petAssist) {
       setUserInput('');
-      setMsg(`你的寵物 ${PET_DATA[petAssist.type].name} 衝出來想幫忙！點擊讓牠解答！`);
+      setMsg(`你的夥伴 ${petAssist.name} 衝出來想幫忙！點擊讓牠解答！`);
     }
   }, [equippedItems, petAssist]);
 
@@ -327,7 +352,7 @@ const MathJungleGame = () => {
         currentEquip = currentEquip.filter(id => id !== usedConsumableId);
         detailMsg = `神器碎裂了... 原來答案是 ${currentQ.a}！`;
       } else if (petAssist) {
-        detailMsg = `${PET_DATA[petAssist.type].name} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
+        detailMsg = `${petAssist.name} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
       }
 
       let bossCounterMsg = '';
@@ -435,13 +460,26 @@ const MathJungleGame = () => {
     const item = pool[Math.floor(Math.random() * pool.length)];
     
     if (rarity === 'PET') {
-      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendship: 0, activity: 'idle' };
+      const petName = PET_DATA[item.petType].speciesName;
+      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendshipLevel: 0, friendshipExp: 0, name: petName, activity: 'idle' };
       setPets(prev => [...prev, newPet]);
     } else {
       setInventory([...inventory, item.id]); 
     }
     
     setGachaResult(item);
+  };
+
+  const renamePet = (petInstanceId) => {
+    const newName = window.prompt('請幫你的夥伴取個響亮的名字 (最多8個字)：');
+    if (newName && newName.trim().length > 0) {
+      setPets(prevPets => prevPets.map(pet => {
+        if (pet.instanceId === petInstanceId) {
+          return { ...pet, name: newName.trim().substring(0, 8) };
+        }
+        return pet;
+      }));
+    }
   };
 
   const toggleEquip = (itemId) => {
@@ -469,39 +507,40 @@ const MathJungleGame = () => {
   const interactPet = (petInstanceId, actionType) => {
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === petInstanceId) {
-        let boost = 5;
+        let expGained = 0;
         let act = 'happy';
-        if (actionType === 'fetch') { act = 'fetching'; boost = 8; }
-        if (actionType === 'pet') { act = 'petting'; boost = 5; }
-        if (actionType === 'bathe') { act = 'bathing'; boost = 10; }
-        return { ...pet, friendship: Math.min(100, (pet.friendship || 0) + boost), activity: act };
+        if (actionType === 'fetch') { act = 'fetching'; expGained = 2; }
+        if (actionType === 'pet') { act = 'petting'; expGained = 1; }
+        if (actionType === 'bathe') { act = 'bathing'; expGained = 3; }
+        
+        return { ...processFriendshipGain(pet, expGained), activity: act };
       }
       return pet;
     }));
   };
 
   const playRPS = (playerChoice) => {
-    const choices = ['✌️', '✊', '🖐️'];
+    const choices = ['剪刀', '石頭', '布'];
     const petChoice = choices[Math.floor(Math.random() * choices.length)];
     let result = '';
-    let boost = 0;
+    let expGained = 0;
     let act = '';
 
     if (playerChoice === petChoice) {
       result = '平手！';
-      boost = 5;
+      expGained = 1;
       act = 'rps_draw';
     } else if (
-      (playerChoice === '✌️' && petChoice === '🖐️') ||
-      (playerChoice === '✊' && petChoice === '✌️') ||
-      (playerChoice === '🖐️' && petChoice === '✊')
+      (playerChoice === '剪刀' && petChoice === '布') ||
+      (playerChoice === '石頭' && petChoice === '剪刀') ||
+      (playerChoice === '布' && petChoice === '石頭')
     ) {
       result = '你贏了！';
-      boost = 8; 
+      expGained = 1; 
       act = 'rps_lose'; 
     } else {
       result = '你輸了！寵物大勝利！';
-      boost = 10; 
+      expGained = 3; 
       act = 'rps_win';
     }
 
@@ -509,7 +548,7 @@ const MathJungleGame = () => {
     
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === rpsState.petId) {
-        return { ...pet, friendship: Math.min(100, (pet.friendship || 0) + boost), activity: act };
+        return { ...processFriendshipGain(pet, expGained), activity: act };
       }
       return pet;
     }));
@@ -530,11 +569,10 @@ const MathJungleGame = () => {
         if (pet.instanceId === petInstanceId) {
           const newFedCount = pet.fedCount + 1;
           let newStage = pet.stage;
-          if (newFedCount >= 30) newStage = 3;
-          else if (newFedCount >= 10) newStage = 2;
+          if (newFedCount >= 50) newStage = 3;
+          else if (newFedCount >= 20) newStage = 2;
           
-          const newFriendship = Math.min(100, (pet.friendship || 0) + 5);
-          return { ...pet, fedCount: newFedCount, stage: newStage, friendship: newFriendship, activity: 'eating' };
+          return { ...processFriendshipGain(pet, 2), fedCount: newFedCount, stage: newStage, activity: 'eating' };
         }
         return pet;
       }));
@@ -590,7 +628,7 @@ const MathJungleGame = () => {
               );
             })}
             {equippedItems.length === 0 && !petAssist && <div className="text-stone-400 text-sm font-bold flex items-center">裝備越多，題目越難喔！</div>}
-            {petAssist && <div className="text-yellow-600 text-sm font-black flex items-center animate-pulse">滿分好友來幫忙啦！</div>}
+            {petAssist && <div className="text-yellow-600 text-sm font-black flex items-center animate-pulse">夥伴來幫忙啦！</div>}
           </div>
         )}
 
@@ -614,7 +652,7 @@ const MathJungleGame = () => {
             />
           </div>
           <button onClick={checkAnswer} disabled={showReward || showBossVictory} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
-            {petAssist ? '讓寵物解題！' : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
+            {petAssist ? `讓 ${petAssist.name} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
           </button>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
@@ -749,8 +787,12 @@ const MathJungleGame = () => {
               const petData = PET_DATA[pet.type];
               const petIcon = pet.stage === 1 ? petData.icon1 : pet.stage === 2 ? petData.icon2 : petData.icon3;
               const stageLabel = pet.stage === 1 ? '幼體' : pet.stage === 2 ? '成長期' : '完全體';
-              const nextStageReq = pet.stage === 1 ? 10 : pet.stage === 2 ? 30 : 'MAX';
-              const currentFriendship = pet.friendship || 0;
+              const nextStageReq = pet.stage === 1 ? 20 : pet.stage === 2 ? 50 : 'MAX';
+              
+              const currentLevel = pet.friendshipLevel || 0;
+              const currentExp = pet.friendshipExp !== undefined ? pet.friendshipExp : (pet.friendship || 0);
+              const reqExp = 100 + (currentLevel * 50);
+
               const statusText = ACTIVITY_TEXT[pet.activity || 'idle'];
               
               return (
@@ -764,7 +806,11 @@ const MathJungleGame = () => {
                       {petIcon}
                     </div>
                     <div className="flex-1">
-                      <div className="font-black text-lg text-green-900">{petData.name} <span className="text-xs text-stone-500 font-normal">({stageLabel})</span></div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-black text-lg text-green-900">{pet.name || petData.speciesName}</div>
+                        <button onClick={() => renamePet(pet.instanceId)} className="text-[10px] bg-stone-200 text-stone-600 px-2 py-1 rounded shadow-sm hover:bg-stone-300">改名</button>
+                      </div>
+                      <div className="text-xs text-stone-500 font-normal mb-1">{petData.speciesName} ({stageLabel})</div>
                       
                       <div className="mt-1 flex items-center justify-between text-xs font-bold text-stone-500">
                         <span>成長度</span>
@@ -775,18 +821,18 @@ const MathJungleGame = () => {
                       </div>
 
                       <div className="mt-1 flex items-center justify-between text-xs font-bold text-stone-500">
-                        <span>友好度</span>
-                        <span className={currentFriendship === 100 ? 'text-pink-500' : ''}>{currentFriendship} / 100</span>
+                        <span>友好等級 Lv.{currentLevel}</span>
+                        <span className="text-pink-500">{currentExp} / {reqExp}</span>
                       </div>
                       <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden border border-stone-300">
-                        <div className="bg-pink-400 h-full transition-all" style={{ width: `${currentFriendship}%` }}></div>
+                        <div className="bg-pink-400 h-full transition-all" style={{ width: `${(currentExp / reqExp) * 100}%` }}></div>
                       </div>
                     </div>
                   </div>
                   
                   <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
                     <button onClick={() => setRpsState({ active: true, petId: pet.instanceId, step: 'choice', playerChoice: '', petChoice: '', result: '' })} className="bg-purple-100 hover:bg-purple-200 border-2 border-purple-400 text-purple-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
-                      猜拳
+                      猜拳對戰
                     </button>
                     <button onClick={() => interactPet(pet.instanceId, 'fetch')} className="bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
                       丟骨頭
@@ -795,7 +841,7 @@ const MathJungleGame = () => {
                       摸摸頭
                     </button>
                     <button onClick={() => interactPet(pet.instanceId, 'bathe')} className="bg-cyan-100 hover:bg-cyan-200 border-2 border-cyan-400 text-cyan-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
-                      洗澡
+                      洗個澡
                     </button>
                     {pet.stage < 3 && availableFoods.map(foodId => {
                       const item = ITEMS_DB.find(i => i.id === foodId);
@@ -806,9 +852,9 @@ const MathJungleGame = () => {
                       );
                     })}
                   </div>
-                  {pet.stage === 3 && currentFriendship === 100 && (
+                  {pet.stage === 3 && currentLevel >= 1 && (
                     <div className="mt-2 text-xs font-bold text-center text-pink-600 bg-pink-50 py-1 rounded">
-                      這隻寵物非常愛你！解題時可能會跑出來幫忙喔！
+                      強大羈絆！解題時會有 {Math.min(10 + currentLevel * 2, 50)}% 機率跑出來幫忙！
                     </div>
                   )}
                 </div>
@@ -824,13 +870,13 @@ const MathJungleGame = () => {
                 <h3 className="text-2xl font-black text-stone-800 mb-6">和寵物猜拳！</h3>
                 {rpsState.step === 'choice' ? (
                   <div className="flex justify-center gap-4">
-                     <button onClick={()=>playRPS('✌️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✌️</button>
-                     <button onClick={()=>playRPS('✊')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✊</button>
-                     <button onClick={()=>playRPS('🖐️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">🖐️</button>
+                     <button onClick={()=>playRPS('剪刀')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">剪刀</button>
+                     <button onClick={()=>playRPS('石頭')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">石頭</button>
+                     <button onClick={()=>playRPS('布')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">布</button>
                   </div>
                 ) : (
                   <div>
-                     <div className="text-4xl mb-4 font-bold text-stone-700">你 {rpsState.playerChoice} VS {rpsState.petChoice} 寵物</div>
+                     <div className="text-2xl mb-4 font-bold text-stone-700">你出 {rpsState.playerChoice} 對上 寵物出 {rpsState.petChoice}</div>
                      <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
                      <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
                   </div>
@@ -851,7 +897,7 @@ const MathJungleGame = () => {
         <div className="flex gap-2">
           <button onClick={() => setView('pet')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-orange-500 border-orange-700'}`}>
             寵物
-            {pets.some(p => p.stage === 3 && p.friendship === 100) && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span></span>}
+            {pets.some(p => p.stage === 3 && (p.friendshipLevel || 0) >= 1) && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span></span>}
           </button>
           <button onClick={() => setView('gacha')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-green-600 border-green-800'}`}> 抽蛋</button>
           <button onClick={() => setView('bag')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-blue-600 border-blue-800'}`}>
