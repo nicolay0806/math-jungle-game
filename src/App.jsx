@@ -92,12 +92,6 @@ const ACTIVITY_TEXT = {
   tired: '累壞了，氣喘吁吁...'
 };
 
-const RPS_ICONS = {
-  '剪刀': '✌️',
-  '石頭': '✊',
-  '布': '🖐️'
-};
-
 const generateQuestion = (isBoss, equipCount) => {
   const difficulty = isBoss ? 5 : Math.min(equipCount * 2, 5);
   let types = [];
@@ -244,6 +238,8 @@ const getSavedState = (key, defaultValue) => {
 };
 
 const processFriendshipGain = (pet, expGained) => {
+  if (expGained <= 0) return pet;
+
   let currentLevel = pet.friendshipLevel || 0;
   let currentExp = pet.friendshipExp !== undefined ? pet.friendshipExp : (pet.friendship || 0); 
   
@@ -281,7 +277,7 @@ const MathJungleGame = () => {
 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
-  const [bossMissCount, setBossMissCount] = useState(0); // 紀錄魔王關連續失誤
+  const [bossMissCount, setBossMissCount] = useState(0); 
   const [rpsState, setRpsState] = useState({ active: false, petId: null, step: 'choice', playerChoice: '', petChoice: '', result: '' });
   
   const [isSleepTime, setIsSleepTime] = useState(false);
@@ -377,23 +373,9 @@ const MathJungleGame = () => {
       setMsg(`神力準備就緒！請直接點擊解放神力！`);
     } else if (petAssist) {
       setUserInput('');
-      setMsg(`你的夥伴 ${petAssist.name} 衝出來想幫忙！點擊讓牠解答！`);
+      setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
   }, [equippedItems, petAssist]);
-
-  const checkDailyLimit = () => {
-    const today = new Date().toISOString().split('T')[0];
-    let currentStats = dailyStats;
-    if (currentStats.date !== today) {
-       currentStats = { date: today, count: 0 };
-    }
-    if (currentStats.count >= DAILY_INTERACT_LIMIT) {
-       alert('今天已經跟寵物互動太多次了，讓牠好好睡個覺休息一下吧！');
-       return false;
-    }
-    setDailyStats({ date: today, count: currentStats.count + 1 });
-    return true;
-  };
 
   const calculatePoints = () => {
     let itemBonus = 0;
@@ -461,13 +443,12 @@ const MathJungleGame = () => {
         currentEquip = currentEquip.filter(id => id !== usedConsumableId);
         detailMsg = `神器碎裂了... 原來答案是 ${currentQ.a}！`;
       } else if (petAssist) {
-        detailMsg = `${petAssist.name} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
+        detailMsg = `${petAssist.name || PET_DATA[petAssist.type].speciesName} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
       }
 
       let bossCounterMsg = '';
       if (isBossActive) {
-        setBossMissCount(0); // 答對重置連續失誤次數
-        // 降低正確答題時的隨機掉裝機率，現在非常罕見
+        setBossMissCount(0); 
         if (Math.random() < 0.05) { 
           if (currentEquip.length > 0 && Math.random() < 0.2) { 
             const dropIdx = Math.floor(Math.random() * currentEquip.length);
@@ -642,31 +623,42 @@ const MathJungleGame = () => {
   };
 
   const interactPet = (petInstanceId, actionType) => {
-    if (!checkDailyLimit()) return;
+    const targetPet = pets.find(p => p.instanceId === petInstanceId);
+    if ((targetPet.energy ?? 5) <= 0) {
+        alert(`${targetPet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
+        setPets(prevPets => prevPets.map(pet => pet.instanceId === petInstanceId ? { ...pet, activity: 'tired' } : pet));
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    let currentStats = dailyStats;
+    if (currentStats.date !== today) {
+       currentStats = { date: today, count: 0 };
+    }
+
+    let canGain = false;
+    if (currentStats.count < DAILY_INTERACT_LIMIT) {
+       canGain = true;
+       setDailyStats({ date: today, count: currentStats.count + 1 });
+    }
 
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === petInstanceId) {
-        const currentEnergy = pet.energy ?? 5;
-        if (currentEnergy <= 0) {
-          alert(`${pet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
-          return { ...pet, activity: 'tired' };
-        }
-
         let expGained = 0;
         let act = 'happy';
         if (actionType === 'fetch') { act = 'fetching'; expGained = 1; }
         if (actionType === 'pet') { act = 'petting'; expGained = 1; }
         if (actionType === 'bathe') { act = 'bathing'; expGained = 3; }
         
-        return { ...processFriendshipGain(pet, expGained), activity: act, energy: currentEnergy - 1 };
+        if (!canGain) expGained = 0;
+        
+        return { ...processFriendshipGain(pet, expGained), activity: act, energy: (pet.energy ?? 5) - 1 };
       }
       return pet;
     }));
   };
 
   const startRPS = (petInstanceId) => {
-    if (!checkDailyLimit()) return;
-
     const targetPet = pets.find(p => p.instanceId === petInstanceId);
     if ((targetPet.energy ?? 5) <= 0) {
         alert(`${targetPet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
@@ -704,9 +696,22 @@ const MathJungleGame = () => {
 
     setRpsState({ ...rpsState, step: 'result', playerChoice, petChoice, result });
     
+    const today = new Date().toISOString().split('T')[0];
+    let currentStats = dailyStats;
+    if (currentStats.date !== today) {
+       currentStats = { date: today, count: 0 };
+    }
+
+    let canGain = false;
+    if (currentStats.count < DAILY_INTERACT_LIMIT) {
+       canGain = true;
+       setDailyStats({ date: today, count: currentStats.count + 1 });
+    }
+    
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === rpsState.petId) {
-        return { ...processFriendshipGain(pet, expGained), activity: act, energy: (pet.energy ?? 5) - 1 };
+        const finalExp = canGain ? expGained : 0;
+        return { ...processFriendshipGain(pet, finalExp), activity: act, energy: (pet.energy ?? 5) - 1 };
       }
       return pet;
     }));
@@ -841,7 +846,7 @@ const MathJungleGame = () => {
             />
           </div>
           <button onClick={checkAnswer} disabled={showReward || showBossVictory} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
-            {petAssist ? `讓 ${petAssist.name} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
+            {petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
           </button>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
@@ -1138,7 +1143,7 @@ const MathJungleGame = () => {
         {showReward && isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl">
-              <h3 className="text-4xl font-black text-red-900 mb-2">攻擊！</h3>
+              <h3 className="text-4xl font-black text-red-900 mb-2">攻擊成功！</h3>
               <p className="text-red-700 font-bold mb-6 whitespace-pre-line">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-red-900 shadow-lg active:translate-y-2">繼續攻擊</button>
             </motion.div>
