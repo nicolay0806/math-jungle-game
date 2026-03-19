@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// --- 定義突變屬性池 ---
-const MUTATION_TRAITS = [
-  { key: 'wings', name: '翱翔雙翼', icon: '💸', desc: '這隻寵物背上長出了強壯的翅膀，能在高空算術！' },
-  { key: 'fins', name: '深海魚鰭', icon: '🐟', desc: '進化出了魚鰭，擅長在水中解答題目！' },
-  { key: 'fire', name: '煉獄噴火', icon: '🔥', desc: '獲得了噴火能力，能把難題通通燒毀！' },
-  { key: 'fangs', name: '劇毒毒牙', icon: '🐍', desc: '長出了鋒利的毒牙，答案精準致命！' }
-];
-
 const ITEMS_DB = [
   { id: 1, name: '暴龍透視鏡', rarity: 'SSR', icon: '🦖', effect: '看穿答案 (消耗)', desc: '一次性神器，使用後消失。', source: 'gacha', type: 'consumable' },
   { id: 2, name: '先知的石板', rarity: 'SSR', icon: '🗿', effect: '看穿答案 (消耗)', desc: '上面刻著正解，用完會風化。', source: 'gacha', type: 'consumable' },
@@ -53,8 +45,7 @@ const ITEMS_DB = [
   
   { id: 44, name: '鮮嫩翼龍排', rarity: 'SR', icon: '🥩', effect: '大幅成長', desc: '極品美食，寵物超愛。', source: 'gacha', type: 'food', isFood: true, foodValue: 5 },
   { id: 45, name: '黃金霸王肉', rarity: 'SSR', icon: '🍖', effect: '超速成長', desc: '神級美食，瞬間長大。', source: 'gacha', type: 'food', isFood: true, foodValue: 15 },
-  // --- 🆕 神奇幻化蛋糕升級版 ---
-  { id: 46, name: '神奇幻化蛋糕', rarity: 'SSR', icon: '🍰', effect: '賦予隨機突變屬性', desc: '食用後能讓寵物產生突變（如噴火、長翅膀），每隻寵物限吃一次。', source: 'gacha', type: 'food', isFood: true, foodValue: 3, isTransform: true },
+  { id: 46, name: '神奇幻化蛋糕', rarity: 'SSR', icon: '🍰', effect: '賦予隨機突變屬性', desc: '食用後能讓寵物產生突變，每隻寵物限吃一次。', source: 'gacha', type: 'food', isFood: true, foodValue: 3, isTransform: true },
 ];
 
 const SETS_DB = [
@@ -70,6 +61,13 @@ const PET_DATA = {
   trex: { speciesName: '暴龍', icon1: '🥚', icon2: '🦎', icon3: '🦖' },
   tiger: { speciesName: '劍齒虎', icon1: '🧶', icon2: '🐱', icon3: '🐯' }
 };
+
+const MUTATION_TRAITS = [
+  { key: 'wings', name: '翱翔雙翼', icon: '💸', desc: '這隻寵物背上長出了強壯的翅膀，能在高空算術！' },
+  { key: 'fins', name: '深海魚鰭', icon: '🐟', desc: '進化出了魚鰭，擅長在水中解答題目！' },
+  { key: 'fire', name: '煉獄噴火', icon: '🔥', desc: '獲得了噴火能力，能把難題通通燒毀！' },
+  { key: 'fangs', name: '劇毒毒牙', icon: '🐍', desc: '長出了鋒利的毒牙，答案精準致命！' }
+];
 
 const ACTIVITY_TEXT = {
   idle: '正在發呆...',
@@ -99,11 +97,16 @@ const generateQuestion = (isBoss, equipCount) => {
   let types = [];
   
   if (difficulty <= 1) { 
-    types = ['add_2digit', 'sub_2digit', 'mul_basic', 'money_basic'];
+    types = ['add_2digit', 'sub_2digit', 'mul_basic', 'money_basic', 'estimate_ten', 'word_add_basic'];
   } else if (difficulty <= 3) { 
-    types = ['add_3digit', 'sub_borrow', 'mul_advance', 'length_calc', 'place_value_adv', 'estimate_ten'];
+    types = ['add_3digit', 'sub_borrow', 'mul_advance', 'length_calc', 'place_value_adv', 'estimate_ten', 'estimate_hundred', 'estimate_calc', 'word_sub_adv', 'word_mul_basic'];
   } else { 
-    types = ['add_mix_3', 'sub_big', 'mul_2d_1d', 'div_basic', 'time_elapse_hard', 'mix_op'];
+    types = ['add_mix_3', 'sub_big', 'mul_2d_1d', 'div_basic', 'time_elapse_hard', 'mix_op', 'estimate_hundred', 'estimate_calc', 'word_div_adv', 'word_mix_boss'];
+  }
+
+  // 增加魔王關卡應用題的比重
+  if (isBoss) {
+    types.push('word_div_adv', 'word_mix_boss', 'word_mix_boss', 'mix_op', 'word_sub_adv');
   }
 
   const type = types[Math.floor(Math.random() * types.length)];
@@ -146,11 +149,35 @@ const generateQuestion = (isBoss, equipCount) => {
       const digit = Math.random() > 0.5 ? '百' : '十';
       const ans = digit === '百' ? Math.floor(pv / 100) : Math.floor((pv % 100) / 10);
       return { q: `${pv} 的${digit}位數是多少？`, a: ans, unit: '', points: 25, level: '長老密碼 (Lv.3)' };
+      
     case 'estimate_ten':
       const estNum = Math.floor(Math.random() * 80) + 11; 
       const remainder = estNum % 10;
       const estAns = remainder >= 5 ? estNum - remainder + 10 : estNum - remainder;
-      return { q: `${estNum} 大約是幾十？`, a: estAns, unit: '', points: 25, level: '直覺估算 (Lv.3)' };
+      return { q: `${estNum} 大約是幾十？`, a: estAns, unit: '', points: 20, level: '直覺估算 (Lv.2)' };
+      
+    case 'estimate_hundred':
+      const estNum100 = Math.floor(Math.random() * 800) + 111; 
+      const rem100 = estNum100 % 100;
+      const estAns100 = rem100 >= 50 ? estNum100 - rem100 + 100 : estNum100 - rem100;
+      return { q: `${estNum100} 大約是幾百？`, a: estAns100, unit: '', points: 25, level: '百位估算 (Lv.3)' };
+      
+    case 'estimate_calc':
+      const isAdd = Math.random() > 0.5;
+      let estA = Math.floor(Math.random() * 80) + 11;
+      let estB = Math.floor(Math.random() * 80) + 11;
+      if (!isAdd && estA < estB) {
+        const temp = estA; estA = estB; estB = temp;
+      }
+      const roundA = estA % 10 >= 5 ? estA - (estA % 10) + 10 : estA - (estA % 10);
+      const roundB = estB % 10 >= 5 ? estB - (estB % 10) + 10 : estB - (estB % 10);
+      
+      if (isAdd) {
+        return { q: `${estA} + ${estB} 大約是多少？(先四捨五入到十位)`, a: roundA + roundB, unit: '', points: 35, level: '估算運算 (Lv.4)' };
+      } else {
+        return { q: `${estA} - ${estB} 大約是多少？(先四捨五入到十位)`, a: roundA - roundB, unit: '', points: 35, level: '估算運算 (Lv.4)' };
+      }
+
     case 'add_mix_3': 
       const n1 = Math.floor(Math.random() * 50) + 10;
       const n2 = Math.floor(Math.random() * 50) + 10;
@@ -177,6 +204,33 @@ const generateQuestion = (isBoss, equipCount) => {
     case 'time_elapse_hard': 
       const tStart = Math.floor(Math.random() * 8) + 1; 
       return { q: `${tStart}點半 再過 30 分鐘是幾點？`, a: tStart + 1, unit: '點', points: 40, level: '星象觀測 (Lv.5)' };
+
+    // --- 應用題區 ---
+    case 'word_add_basic':
+      const wa1 = Math.floor(Math.random() * 30) + 10;
+      const wa2 = Math.floor(Math.random() * 20) + 10;
+      return { q: `部落昨天採了 ${wa1} 顆果子，今天又採了 ${wa2} 顆，總共有幾顆？`, a: wa1 + wa2, unit: '顆', points: 15, level: '情境應用 (Lv.1)' };
+    case 'word_sub_adv':
+      const ws1 = Math.floor(Math.random() * 50) + 40;
+      const ws2 = Math.floor(Math.random() * 20) + 15;
+      return { q: `獵人帶了 ${ws1} 支石矛出去，不小心弄丟了 ${ws2} 支，還剩下幾支？`, a: ws1 - ws2, unit: '支', points: 25, level: '情境應用 (Lv.3)' };
+    case 'word_mul_basic':
+      const wm_legs = [3, 4][Math.floor(Math.random() * 2)];
+      const wm_count = Math.floor(Math.random() * 6) + 4;
+      const animal = wm_legs === 3 ? '三角龍' : '劍齒虎';
+      const part = wm_legs === 3 ? '角' : '腿';
+      return { q: `一隻${animal}有 ${wm_legs} 個${part}，${wm_count} 隻總共有幾個？`, a: wm_legs * wm_count, unit: '個', points: 25, level: '情境應用 (Lv.3)' };
+    case 'word_div_adv':
+      const wd_people = Math.floor(Math.random() * 5) + 3;
+      const wd_per = Math.floor(Math.random() * 6) + 4;
+      const wd_total = wd_people * wd_per;
+      return { q: `村長把 ${wd_total} 塊烤肉平分給 ${wd_people} 個勇士，每個人可以分到幾塊？`, a: wd_per, unit: '塊', points: 40, level: '情境應用 (Lv.5)' };
+    case 'word_mix_boss':
+      const wmb_total = Math.floor(Math.random() * 50) + 50;
+      const wmb_people = 3;
+      const wmb_give = Math.floor(Math.random() * 10) + 5;
+      return { q: `長老有 ${wmb_total} 顆寶石，分給 ${wmb_people} 個人每人 ${wmb_give} 顆後，長老自己還剩下幾顆？`, a: wmb_total - (wmb_people * wmb_give), unit: '顆', points: 50, level: '情境應用 (Lv.5)' };
+
     default:
       return { q: "10 + 10 = ?", a: 20, unit: '', points: 5, level: '熱身' };
   }
@@ -249,7 +303,7 @@ const MathJungleGame = () => {
   useEffect(() => {
     setEquippedItems(prev => prev.filter(id => {
       const item = ITEMS_DB.find(i => i.id === id);
-      return item && item.type === 'equip';
+      return item && (item.type === 'equip' || item.type === 'consumable');
     }));
   }, []);
 
@@ -517,7 +571,6 @@ const MathJungleGame = () => {
     
     if (rarity === 'PET') {
       const petName = PET_DATA[item.petType].speciesName;
-      // 確保初始狀態自定義圖標為 null
       const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendshipLevel: 0, friendshipExp: 0, energy: 5, name: petName, activity: 'idle', customIcon: null };
       setPets(prev => [...prev, newPet]);
     } else {
@@ -598,7 +651,7 @@ const MathJungleGame = () => {
   };
 
   const playRPS = (playerChoice) => {
-    const choices = ['✌️', '✊', '🖐️'];
+    const choices = ['剪刀', '石頭', '布'];
     const petChoice = choices[Math.floor(Math.random() * choices.length)];
     let result = '';
     let expGained = 0;
@@ -609,9 +662,9 @@ const MathJungleGame = () => {
       expGained = 2;
       act = 'rps_draw';
     } else if (
-      (playerChoice === '✌️' && petChoice === '🖐️') ||
-      (playerChoice === '✊' && petChoice === '✌️') ||
-      (playerChoice === '🖐️' && petChoice === '✊')
+      (playerChoice === '剪刀' && petChoice === '布') ||
+      (playerChoice === '石頭' && petChoice === '剪刀') ||
+      (playerChoice === '布' && petChoice === '石頭')
     ) {
       result = '你贏了！';
       expGained = 1; 
@@ -647,18 +700,15 @@ const MathJungleGame = () => {
         if (pet.instanceId === petInstanceId) {
           const item = ITEMS_DB.find(i => i.id === foodId);
           
-          // --- 🆕 處理幻化蛋糕突變邏輯 ---
           let newMutationTrait = pet.mutationTrait;
           let hasMutated = pet.hasMutated || false;
           
           if (item.isTransform) {
             if (hasMutated) {
-              // 理論上按鈕應該隱藏了，但做個保險
-              alert('這隻寵物已經突變過了，無法再次幻化！ cake 被退回 backpack。');
-              setInventory(prev => [...prev, foodId]); // 退回蛋糕
+              alert('這隻寵物已經突變過了，無法再次幻化！蛋糕被退回背包。');
+              setInventory(prev => [...prev, foodId]); 
               return pet; 
             }
-            // 隨機抽取一個突變屬性
             newMutationTrait = MUTATION_TRAITS[Math.floor(Math.random() * MUTATION_TRAITS.length)];
             hasMutated = true;
             alert(`突變成功！寵物獲得了【${newMutationTrait.name}】屬性！\n${newMutationTrait.desc}`);
@@ -677,19 +727,6 @@ const MathJungleGame = () => {
       }));
     }
   };
-
-  if (isSleepTime) {
-    return (
-      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
-         <div className="text-8xl mb-6 animate-pulse">💤</div>
-         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
-         <p className="text-stone-500 font-bold leading-relaxed">
-           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
-         </p>
-         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
-      </div>
-    );
-  }
 
   const renderGame = () => {
     const hasConsumableSSR = equippedItems.some(id => {
@@ -838,7 +875,7 @@ const MathJungleGame = () => {
                     {item.isFood && <div className="text-[10px] text-blue-600 font-bold bg-blue-100 inline-block px-1 rounded mt-1">成長值 +{item.foodValue || 1}</div>}
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    {item.type === 'equip' && (
+                    {(item.type === 'equip' || item.type === 'consumable') && (
                       <>
                         {equippedCount > 0 && <span className="text-xs font-bold text-green-600">已裝:{equippedCount}</span>}
                         <button 
@@ -897,8 +934,7 @@ const MathJungleGame = () => {
           ) : (
             pets.map(pet => {
               const petData = PET_DATA[pet.type];
-              // 進化後使用預設圖案
-              let displayIcon = pet.stage === 1 ? petData.icon1 : (pet.stage === 2 ? petData.icon2 : petData.icon3);
+              const displayIcon = pet.stage === 1 ? petData.icon1 : (pet.stage === 2 ? petData.icon2 : petData.icon3);
               const stageLabel = pet.stage === 1 ? '幼體' : pet.stage === 2 ? '成長期' : '完全體';
               const nextStageReq = pet.stage === 1 ? 20 : pet.stage === 2 ? 50 : 'MAX';
               
@@ -924,7 +960,6 @@ const MathJungleGame = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        {/* --- 🆕 顯示突變狀態 --- */}
                         <div className="font-black text-lg text-green-900">
                           {pet.name || petData.speciesName}
                           {pet.hasMutated && pet.mutationTrait && (
@@ -970,7 +1005,6 @@ const MathJungleGame = () => {
                     </button>
                     {pet.stage < 3 && availableFoods.map(foodId => {
                       const item = ITEMS_DB.find(i => i.id === foodId);
-                      // --- 🆕 如果吃過蛋糕，就不顯示ケーキ按鈕 ---
                       if (item.isTransform && pet.hasMutated) return null;
                       
                       return (
@@ -998,13 +1032,13 @@ const MathJungleGame = () => {
                 <h3 className="text-2xl font-black text-stone-800 mb-6">和寵物猜拳！</h3>
                 {rpsState.step === 'choice' ? (
                   <div className="flex justify-center gap-4">
-                     <button onClick={()=>playRPS('✌️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✌️</button>
-                     <button onClick={()=>playRPS('✊')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✊</button>
-                     <button onClick={()=>playRPS('🖐️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">🖐️</button>
+                     <button onClick={()=>playRPS('剪刀')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">剪刀</button>
+                     <button onClick={()=>playRPS('石頭')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">石頭</button>
+                     <button onClick={()=>playRPS('布')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">布</button>
                   </div>
                 ) : (
                   <div>
-                     <div className="text-4xl mb-4 font-bold text-stone-700">你 {rpsState.playerChoice} VS {rpsState.petChoice} 寵物</div>
+                     <div className="text-2xl mb-4 font-bold text-stone-700">你出 {rpsState.playerChoice} 對上 寵物出 {rpsState.petChoice}</div>
                      <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
                      <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
                   </div>
