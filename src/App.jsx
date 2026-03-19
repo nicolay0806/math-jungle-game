@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// --- 定義突變屬性池 ---
+const MUTATION_TRAITS = [
+  { key: 'wings', name: '翱翔雙翼', icon: '💸', desc: '這隻寵物背上長出了強壯的翅膀，能在高空算術！' },
+  { key: 'fins', name: '深海魚鰭', icon: '🐟', desc: '進化出了魚鰭，擅長在水中解答題目！' },
+  { key: 'fire', name: '煉獄噴火', icon: '🔥', desc: '獲得了噴火能力，能把難題通通燒毀！' },
+  { key: 'fangs', name: '劇毒毒牙', icon: '🐍', desc: '長出了鋒利的毒牙，答案精準致命！' }
+];
+
 const ITEMS_DB = [
   { id: 1, name: '暴龍透視鏡', rarity: 'SSR', icon: '🦖', effect: '看穿答案 (消耗)', desc: '一次性神器，使用後消失。', source: 'gacha', type: 'consumable' },
   { id: 2, name: '先知的石板', rarity: 'SSR', icon: '🗿', effect: '看穿答案 (消耗)', desc: '上面刻著正解，用完會風化。', source: 'gacha', type: 'consumable' },
@@ -31,23 +39,28 @@ const ITEMS_DB = [
   { id: 15, name: '獸骨迴力鏢', rarity: 'SR', icon: '🪃', effect: '分數+10', desc: '百發百中。 【狩獵套裝C】', source: 'gacha', type: 'equip' },
   
   { id: 16, name: '堅固石碗', rarity: 'S', icon: '🥣', effect: '分數+5', desc: '磨得光滑。 【野餐套裝A】', source: 'gacha', type: 'equip' },
-  { id: 17, name: '美味烤魚', rarity: 'S', icon: '🐟', effect: '分數+5', desc: '可以拿來餵寵物。', source: 'gacha', type: 'equip', isFood: true },
+  { id: 17, name: '美味烤魚', rarity: 'S', icon: '🐟', effect: '美味餵食', desc: '可以拿來餵寵物。', source: 'gacha', type: 'food', isFood: true, foodValue: 1 },
   { id: 18, name: '乾燥木柴', rarity: 'S', icon: '🪵', effect: '分數+5', desc: '生火必備。', source: 'gacha', type: 'equip' },
   { id: 19, name: '漂亮的鵝卵石', rarity: 'S', icon: '🪨', effect: '分數+5', desc: '圓潤可愛。', source: 'gacha', type: 'equip' },
   { id: 20, name: '幸運四葉草', rarity: 'S', icon: '🍀', effect: '分數+5', desc: '考試100分。', source: 'gacha', type: 'equip' },
   { id: 21, name: '結實草鞋', rarity: 'S', icon: '👡', effect: '分數+5', desc: '走得更遠。', source: 'gacha', type: 'equip' },
-  { id: 22, name: '大片樹葉', rarity: 'S', icon: '🍃', effect: '分數+5', desc: '可以拿來餵草食寵物。', source: 'gacha', type: 'equip', isFood: true },
-  { id: 23, name: '堅硬果殼', rarity: 'S', icon: '🥥', effect: '分數+5', desc: '做成樂器。', source: 'gacha', type: 'equip' },
+  { id: 22, name: '大片樹葉', rarity: 'S', icon: '🍃', effect: '美味餵食', desc: '可以拿來餵草食寵物。', source: 'gacha', type: 'food', isFood: true, foodValue: 1 },
+  { id: 23, name: '堅硬果殼', rarity: 'S', icon: '🥥', effect: '分數+5', desc: '做成樂器。 【野餐套裝C】', source: 'gacha', type: 'equip' },
   { id: 24, name: '彩色貝殼', rarity: 'S', icon: '🐚', effect: '分數+5', desc: '海浪聲音。', source: 'gacha', type: 'equip' },
   { id: 25, name: '強韌藤蔓', rarity: 'S', icon: '➰', effect: '分數+5', desc: '非常結實。', source: 'gacha', type: 'equip' },
   { id: 26, name: '石製湯匙', rarity: 'S', icon: '🥄', effect: '分數+5', desc: '喝湯方便。 【野餐套裝B】', source: 'gacha', type: 'equip' },
-  { id: 27, name: '野果籃', rarity: 'S', icon: '🧺', effect: '分數+5', desc: '滿滿的果實可餵寵物。【野餐套裝C】', source: 'gacha', type: 'equip', isFood: true },
+  { id: 27, name: '野果籃', rarity: 'S', icon: '🧺', effect: '美味餵食', desc: '滿滿的果實可餵寵物。', source: 'gacha', type: 'food', isFood: true, foodValue: 2 },
+  
+  { id: 44, name: '鮮嫩翼龍排', rarity: 'SR', icon: '🥩', effect: '大幅成長', desc: '極品美食，寵物超愛。', source: 'gacha', type: 'food', isFood: true, foodValue: 5 },
+  { id: 45, name: '黃金霸王肉', rarity: 'SSR', icon: '🍖', effect: '超速成長', desc: '神級美食，瞬間長大。', source: 'gacha', type: 'food', isFood: true, foodValue: 15 },
+  // --- 🆕 神奇幻化蛋糕升級版 ---
+  { id: 46, name: '神奇幻化蛋糕', rarity: 'SSR', icon: '🍰', effect: '賦予隨機突變屬性', desc: '食用後能讓寵物產生突變（如噴火、長翅膀），每隻寵物限吃一次。', source: 'gacha', type: 'food', isFood: true, foodValue: 3, isTransform: true },
 ];
 
 const SETS_DB = [
   { name: '狩獵王套裝', ids: [6, 7, 15], bonus: 50, desc: '集齊狩獵三寶，攻擊力提升！' },
   { name: '大祭司套裝', ids: [10, 13, 14], bonus: 50, desc: '獲得祖靈的智慧，加成爆表！' },
-  { name: '快樂野餐套裝', ids: [16, 26, 27], bonus: 30, desc: '吃飽喝足，算術更有精神！' },
+  { name: '快樂野餐套裝', ids: [16, 26, 23], bonus: 30, desc: '吃飽喝足，算術更有精神！' },
   { name: '滅世霸王套裝', ids: [31, 32, 33], bonus: 100, desc: '集齊霸王三寶，震撼叢林！' },
   { name: '星空神話套裝', ids: [34, 35, 36], bonus: 100, desc: '集齊星空三寶，宇宙加持！' }
 ];
@@ -69,7 +82,16 @@ const ACTIVITY_TEXT = {
   petting: '舒服地享受你的摸摸～',
   rps_win: '猜拳贏了！超級得意！',
   rps_lose: '猜拳輸了，不服氣地嘟嘴。',
-  rps_draw: '猜拳平手！一直盯著你的手看。'
+  rps_draw: '猜拳平手！一直盯著你的手看。',
+  corner: '縮在角落畫圈圈...',
+  running: '突然在家裡狂奔跑酷！',
+  scratching: '正在用後腳抓癢...',
+  watching: '死死盯著你看...',
+  sniffing: '在地上東聞西聞...',
+  yawning: '打了一個超級大的哈欠...',
+  rolling: '躺在地上翻肚肚...',
+  cleaning: '正在認真理毛...',
+  tired: '累壞了，氣喘吁吁...'
 };
 
 const generateQuestion = (isBoss, equipCount) => {
@@ -169,13 +191,12 @@ const getSavedState = (key, defaultValue) => {
   }
 };
 
-// 友好度計算函式
 const processFriendshipGain = (pet, expGained) => {
   let currentLevel = pet.friendshipLevel || 0;
-  let currentExp = pet.friendshipExp !== undefined ? pet.friendshipExp : (pet.friendship || 0); // 舊版相容
+  let currentExp = pet.friendshipExp !== undefined ? pet.friendshipExp : (pet.friendship || 0); 
   
   currentExp += expGained;
-  let reqExp = 100 + (currentLevel * 50); // 每升一級，需要的經驗值遞增50
+  let reqExp = 100 + (currentLevel * 50); 
 
   while (currentExp >= reqExp) {
     currentLevel++;
@@ -193,7 +214,8 @@ const MathJungleGame = () => {
   const [equippedItems, setEquippedItems] = useState(() => getSavedState('mathJungle_equippedItems', [])); 
   const [totalSolved, setTotalSolved] = useState(() => getSavedState('mathJungle_totalSolved', 0)); 
   const [pets, setPets] = useState(() => getSavedState('mathJungle_pets', [])); 
-  
+  const [dailyStats, setDailyStats] = useState(() => getSavedState('mathJungle_dailyStats', { date: new Date().toISOString().split('T')[0], count: 0 }));
+
   const [userInput, setUserInput] = useState('');
   const [showReward, setShowReward] = useState(false);
   const [showBossVictory, setShowBossVictory] = useState(false);
@@ -208,8 +230,12 @@ const MathJungleGame = () => {
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
   const [rpsState, setRpsState] = useState({ active: false, petId: null, step: 'choice', playerChoice: '', petChoice: '', result: '' });
+  
+  const [isSleepTime, setIsSleepTime] = useState(false);
+
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 30;
+  const DAILY_INTERACT_LIMIT = 20;
 
   useEffect(() => {
     localStorage.setItem('mathJungle_score', JSON.stringify(score));
@@ -217,7 +243,25 @@ const MathJungleGame = () => {
     localStorage.setItem('mathJungle_equippedItems', JSON.stringify(equippedItems));
     localStorage.setItem('mathJungle_totalSolved', JSON.stringify(totalSolved));
     localStorage.setItem('mathJungle_pets', JSON.stringify(pets));
-  }, [score, inventory, equippedItems, totalSolved, pets]);
+    localStorage.setItem('mathJungle_dailyStats', JSON.stringify(dailyStats));
+  }, [score, inventory, equippedItems, totalSolved, pets, dailyStats]);
+
+  useEffect(() => {
+    setEquippedItems(prev => prev.filter(id => {
+      const item = ITEMS_DB.find(i => i.id === id);
+      return item && item.type === 'equip';
+    }));
+  }, []);
+
+  useEffect(() => {
+    const checkTime = () => {
+      const hour = new Date().getHours();
+      setIsSleepTime(hour >= 22 || hour < 6);
+    };
+    checkTime();
+    const timer = setInterval(checkTime, 60000); 
+    return () => clearInterval(timer);
+  }, []);
 
   const resetProgress = () => {
     if (window.confirm('確定要刪除所有進度，重新開始嗎？這個動作無法復原喔！')) {
@@ -229,9 +273,10 @@ const MathJungleGame = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setPets(prevPets => prevPets.map(pet => {
-        const acts = ['idle', 'sleeping', 'wandering', 'happy'];
+        const newEnergy = Math.min(5, (pet.energy ?? 5) + 1);
+        const acts = ['idle', 'sleeping', 'wandering', 'corner', 'running', 'scratching', 'watching', 'sniffing', 'yawning', 'rolling', 'cleaning'];
         const randomAct = acts[Math.floor(Math.random() * acts.length)];
-        return { ...pet, activity: pet.activity === 'eating' || pet.activity === 'fetching' || pet.activity === 'petting' || pet.activity === 'bathing' || pet.activity.startsWith('rps') ? pet.activity : randomAct };
+        return { ...pet, energy: newEnergy, activity: (pet.activity === 'eating' || pet.activity === 'fetching' || pet.activity === 'petting' || pet.activity === 'bathing' || pet.activity?.startsWith('rps')) ? pet.activity : randomAct };
       }));
     }, 10000);
     return () => clearInterval(timer);
@@ -258,12 +303,9 @@ const MathJungleGame = () => {
     
     setPetAssist(null);
     
-    // 助攻機制：必須滿階段，且友好等級 >= 1
     const capablePets = pets.filter(p => p.stage === 3 && (p.friendshipLevel || 0) >= 1);
     if (capablePets.length > 0) {
-        // 挑出等級最高的寵物
         const bestPet = capablePets.reduce((prev, curr) => (prev.friendshipLevel > curr.friendshipLevel) ? prev : curr);
-        // 基礎機率 10%，每 1 級多 2%，最高 50%
         const chance = Math.min(0.10 + (bestPet.friendshipLevel * 0.02), 0.50);
         if (Math.random() < chance) {
             setPetAssist(bestPet);
@@ -285,6 +327,20 @@ const MathJungleGame = () => {
       setMsg(`你的夥伴 ${petAssist.name} 衝出來想幫忙！點擊讓牠解答！`);
     }
   }, [equippedItems, petAssist]);
+
+  const checkDailyLimit = () => {
+    const today = new Date().toISOString().split('T')[0];
+    let currentStats = dailyStats;
+    if (currentStats.date !== today) {
+       currentStats = { date: today, count: 0 };
+    }
+    if (currentStats.count >= DAILY_INTERACT_LIMIT) {
+       alert('今天已經跟寵物互動太多次了，讓牠好好睡個覺休息一下吧！');
+       return false;
+    }
+    setDailyStats({ date: today, count: currentStats.count + 1 });
+    return true;
+  };
 
   const calculatePoints = () => {
     let itemBonus = 0;
@@ -461,7 +517,8 @@ const MathJungleGame = () => {
     
     if (rarity === 'PET') {
       const petName = PET_DATA[item.petType].speciesName;
-      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendshipLevel: 0, friendshipExp: 0, name: petName, activity: 'idle' };
+      // 確保初始狀態自定義圖標為 null
+      const newPet = { instanceId: Date.now(), type: item.petType, stage: 1, fedCount: 0, friendshipLevel: 0, friendshipExp: 0, energy: 5, name: petName, activity: 'idle', customIcon: null };
       setPets(prev => [...prev, newPet]);
     } else {
       setInventory([...inventory, item.id]); 
@@ -505,22 +562,43 @@ const MathJungleGame = () => {
   };
 
   const interactPet = (petInstanceId, actionType) => {
+    if (!checkDailyLimit()) return;
+
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === petInstanceId) {
+        const currentEnergy = pet.energy ?? 5;
+        if (currentEnergy <= 0) {
+          alert(`${pet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
+          return { ...pet, activity: 'tired' };
+        }
+
         let expGained = 0;
         let act = 'happy';
-        if (actionType === 'fetch') { act = 'fetching'; expGained = 2; }
+        if (actionType === 'fetch') { act = 'fetching'; expGained = 1; }
         if (actionType === 'pet') { act = 'petting'; expGained = 1; }
         if (actionType === 'bathe') { act = 'bathing'; expGained = 3; }
         
-        return { ...processFriendshipGain(pet, expGained), activity: act };
+        return { ...processFriendshipGain(pet, expGained), activity: act, energy: currentEnergy - 1 };
       }
       return pet;
     }));
   };
 
+  const startRPS = (petInstanceId) => {
+    if (!checkDailyLimit()) return;
+
+    const targetPet = pets.find(p => p.instanceId === petInstanceId);
+    if ((targetPet.energy ?? 5) <= 0) {
+        alert(`${targetPet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
+        setPets(prevPets => prevPets.map(pet => pet.instanceId === petInstanceId ? { ...pet, activity: 'tired' } : pet));
+        return;
+    }
+
+    setRpsState({ active: true, petId: petInstanceId, step: 'choice', playerChoice: '', petChoice: '', result: '' });
+  };
+
   const playRPS = (playerChoice) => {
-    const choices = ['剪刀', '石頭', '布'];
+    const choices = ['✌️', '✊', '🖐️'];
     const petChoice = choices[Math.floor(Math.random() * choices.length)];
     let result = '';
     let expGained = 0;
@@ -528,19 +606,19 @@ const MathJungleGame = () => {
 
     if (playerChoice === petChoice) {
       result = '平手！';
-      expGained = 1;
+      expGained = 2;
       act = 'rps_draw';
     } else if (
-      (playerChoice === '剪刀' && petChoice === '布') ||
-      (playerChoice === '石頭' && petChoice === '剪刀') ||
-      (playerChoice === '布' && petChoice === '石頭')
+      (playerChoice === '✌️' && petChoice === '🖐️') ||
+      (playerChoice === '✊' && petChoice === '✌️') ||
+      (playerChoice === '🖐️' && petChoice === '✊')
     ) {
       result = '你贏了！';
       expGained = 1; 
       act = 'rps_lose'; 
     } else {
       result = '你輸了！寵物大勝利！';
-      expGained = 3; 
+      expGained = 5; 
       act = 'rps_win';
     }
 
@@ -548,7 +626,7 @@ const MathJungleGame = () => {
     
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === rpsState.petId) {
-        return { ...processFriendshipGain(pet, expGained), activity: act };
+        return { ...processFriendshipGain(pet, expGained), activity: act, energy: (pet.energy ?? 5) - 1 };
       }
       return pet;
     }));
@@ -567,17 +645,51 @@ const MathJungleGame = () => {
       
       setPets(prevPets => prevPets.map(pet => {
         if (pet.instanceId === petInstanceId) {
-          const newFedCount = pet.fedCount + 1;
+          const item = ITEMS_DB.find(i => i.id === foodId);
+          
+          // --- 🆕 處理幻化蛋糕突變邏輯 ---
+          let newMutationTrait = pet.mutationTrait;
+          let hasMutated = pet.hasMutated || false;
+          
+          if (item.isTransform) {
+            if (hasMutated) {
+              // 理論上按鈕應該隱藏了，但做個保險
+              alert('這隻寵物已經突變過了，無法再次幻化！ cake 被退回 backpack。');
+              setInventory(prev => [...prev, foodId]); // 退回蛋糕
+              return pet; 
+            }
+            // 隨機抽取一個突變屬性
+            newMutationTrait = MUTATION_TRAITS[Math.floor(Math.random() * MUTATION_TRAITS.length)];
+            hasMutated = true;
+            alert(`突變成功！寵物獲得了【${newMutationTrait.name}】屬性！\n${newMutationTrait.desc}`);
+          }
+          
+          const foodVal = item.foodValue || 1;
+          const newFedCount = pet.fedCount + foodVal;
           let newStage = pet.stage;
+          
           if (newFedCount >= 50) newStage = 3;
           else if (newFedCount >= 20) newStage = 2;
           
-          return { ...processFriendshipGain(pet, 2), fedCount: newFedCount, stage: newStage, activity: 'eating' };
+          return { ...processFriendshipGain(pet, 2), fedCount: newFedCount, stage: newStage, activity: 'eating', energy: Math.min(5, (pet.energy ?? 5) + 2), mutationTrait: newMutationTrait, hasMutated: hasMutated };
         }
         return pet;
       }));
     }
   };
+
+  if (isSleepTime) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
+         <div className="text-8xl mb-6 animate-pulse">💤</div>
+         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
+         <p className="text-stone-500 font-bold leading-relaxed">
+           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
+         </p>
+         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
+      </div>
+    );
+  }
 
   const renderGame = () => {
     const hasConsumableSSR = equippedItems.some(id => {
@@ -723,7 +835,7 @@ const MathJungleGame = () => {
                     </div>
                     <div className="text-xs text-stone-500">{item.desc}</div>
                     {setInfo && <div className="text-[10px] text-purple-600 font-bold bg-purple-100 inline-block px-1 rounded mt-1">集齊: {setInfo.name}</div>}
-                    {item.isFood && <div className="text-[10px] text-blue-600 font-bold bg-blue-100 inline-block px-1 rounded mt-1">可餵養寵物</div>}
+                    {item.isFood && <div className="text-[10px] text-blue-600 font-bold bg-blue-100 inline-block px-1 rounded mt-1">成長值 +{item.foodValue || 1}</div>}
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     {item.type === 'equip' && (
@@ -785,7 +897,8 @@ const MathJungleGame = () => {
           ) : (
             pets.map(pet => {
               const petData = PET_DATA[pet.type];
-              const petIcon = pet.stage === 1 ? petData.icon1 : pet.stage === 2 ? petData.icon2 : petData.icon3;
+              // 進化後使用預設圖案
+              let displayIcon = pet.stage === 1 ? petData.icon1 : (pet.stage === 2 ? petData.icon2 : petData.icon3);
               const stageLabel = pet.stage === 1 ? '幼體' : pet.stage === 2 ? '成長期' : '完全體';
               const nextStageReq = pet.stage === 1 ? 20 : pet.stage === 2 ? 50 : 'MAX';
               
@@ -794,20 +907,32 @@ const MathJungleGame = () => {
               const reqExp = 100 + (currentLevel * 50);
 
               const statusText = ACTIVITY_TEXT[pet.activity || 'idle'];
+              const energyDisplay = Array(5).fill(0).map((_, i) => i < (pet.energy ?? 5) ? '❤️' : '🤍').join('');
               
               return (
                 <div key={pet.instanceId} className="bg-white p-4 rounded-2xl border-4 border-green-600 shadow-md relative">
                   {pet.stage === 3 && <div className="absolute -top-3 -right-3 bg-yellow-400 text-red-700 font-black text-xs px-2 py-1 rounded-full transform rotate-12 border-2 border-red-700">常駐+10分</div>}
                   
-                  <div className="text-xs font-bold text-blue-600 mb-2 bg-blue-50 inline-block px-2 py-1 rounded">狀態: {statusText}</div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-xs font-bold text-blue-600 bg-blue-50 inline-block px-2 py-1 rounded">狀態: {statusText}</div>
+                    <div className="text-[10px] font-bold text-stone-500">體力: {energyDisplay}</div>
+                  </div>
 
                   <div className="flex items-center gap-4">
                     <div className={`flex items-center justify-center bg-green-50 rounded-full border-4 border-green-300 ${pet.stage === 3 ? 'w-20 h-20 text-6xl' : 'w-16 h-16 text-4xl'}`}>
-                      {petIcon}
+                      {displayIcon}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="font-black text-lg text-green-900">{pet.name || petData.speciesName}</div>
+                        {/* --- 🆕 顯示突變狀態 --- */}
+                        <div className="font-black text-lg text-green-900">
+                          {pet.name || petData.speciesName}
+                          {pet.hasMutated && pet.mutationTrait && (
+                            <span className="text-xs text-purple-700 ml-1">
+                                ({pet.mutationTrait.name} {pet.mutationTrait.icon})
+                            </span>
+                          )}
+                        </div>
                         <button onClick={() => renamePet(pet.instanceId)} className="text-[10px] bg-stone-200 text-stone-600 px-2 py-1 rounded shadow-sm hover:bg-stone-300">改名</button>
                       </div>
                       <div className="text-xs text-stone-500 font-normal mb-1">{petData.speciesName} ({stageLabel})</div>
@@ -831,7 +956,7 @@ const MathJungleGame = () => {
                   </div>
                   
                   <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-                    <button onClick={() => setRpsState({ active: true, petId: pet.instanceId, step: 'choice', playerChoice: '', petChoice: '', result: '' })} className="bg-purple-100 hover:bg-purple-200 border-2 border-purple-400 text-purple-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
+                    <button onClick={() => startRPS(pet.instanceId)} className="bg-purple-100 hover:bg-purple-200 border-2 border-purple-400 text-purple-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
                       猜拳對戰
                     </button>
                     <button onClick={() => interactPet(pet.instanceId, 'fetch')} className="bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
@@ -845,6 +970,9 @@ const MathJungleGame = () => {
                     </button>
                     {pet.stage < 3 && availableFoods.map(foodId => {
                       const item = ITEMS_DB.find(i => i.id === foodId);
+                      // --- 🆕 如果吃過蛋糕，就不顯示ケーキ按鈕 ---
+                      if (item.isTransform && pet.hasMutated) return null;
+                      
                       return (
                         <button key={foodId} onClick={() => feedPet(pet.instanceId, foodId)} className="bg-orange-100 hover:bg-orange-200 border-2 border-orange-400 text-orange-900 text-xs font-bold px-3 py-2 rounded-lg shadow-sm active:translate-y-1 whitespace-nowrap">
                           餵食 {item.icon}
@@ -870,13 +998,13 @@ const MathJungleGame = () => {
                 <h3 className="text-2xl font-black text-stone-800 mb-6">和寵物猜拳！</h3>
                 {rpsState.step === 'choice' ? (
                   <div className="flex justify-center gap-4">
-                     <button onClick={()=>playRPS('剪刀')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">剪刀</button>
-                     <button onClick={()=>playRPS('石頭')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">石頭</button>
-                     <button onClick={()=>playRPS('布')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">布</button>
+                     <button onClick={()=>playRPS('✌️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✌️</button>
+                     <button onClick={()=>playRPS('✊')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">✊</button>
+                     <button onClick={()=>playRPS('🖐️')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">🖐️</button>
                   </div>
                 ) : (
                   <div>
-                     <div className="text-2xl mb-4 font-bold text-stone-700">你出 {rpsState.playerChoice} 對上 寵物出 {rpsState.petChoice}</div>
+                     <div className="text-4xl mb-4 font-bold text-stone-700">你 {rpsState.playerChoice} VS {rpsState.petChoice} 寵物</div>
                      <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
                      <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
                   </div>
