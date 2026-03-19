@@ -92,6 +92,13 @@ const ACTIVITY_TEXT = {
   tired: '累壞了，氣喘吁吁...'
 };
 
+// --- 這裡就是遺失的猜拳圖案字典！ ---
+const RPS_ICONS = {
+  '剪刀': '✌️',
+  '石頭': '✊',
+  '布': '🖐️'
+};
+
 const generateQuestion = (isBoss, equipCount) => {
   const difficulty = isBoss ? 5 : Math.min(equipCount * 2, 5);
   let types = [];
@@ -376,6 +383,20 @@ const MathJungleGame = () => {
       setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
   }, [equippedItems, petAssist]);
+
+  const checkDailyLimit = () => {
+    const today = new Date().toISOString().split('T')[0];
+    let currentStats = dailyStats;
+    if (currentStats.date !== today) {
+       currentStats = { date: today, count: 0 };
+    }
+    if (currentStats.count >= DAILY_INTERACT_LIMIT) {
+       alert('今天已經跟寵物互動太多次了，讓牠好好睡個覺休息一下吧！');
+       return false;
+    }
+    setDailyStats({ date: today, count: currentStats.count + 1 });
+    return true;
+  };
 
   const calculatePoints = () => {
     let itemBonus = 0;
@@ -760,19 +781,6 @@ const MathJungleGame = () => {
     }
   };
 
-  if (isSleepTime) {
-    return (
-      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
-         <div className="text-8xl mb-6 animate-pulse">💤</div>
-         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
-         <p className="text-stone-500 font-bold leading-relaxed">
-           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
-         </p>
-         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
-      </div>
-    );
-  }
-
   const renderGame = () => {
     const hasConsumableSSR = equippedItems.some(id => {
       const item = ITEMS_DB.find(i => i.id === id);
@@ -1075,7 +1083,7 @@ const MathJungleGame = () => {
              const activePet = pets.find(p => p.instanceId === rpsState.petId);
              const petDisplayName = activePet ? (activePet.name || PET_DATA[activePet.type].speciesName) : '寵物';
              return (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+              <motion.div key="rps-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
                 <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm">
                   <h3 className="text-2xl font-black text-stone-800 mb-6">和 {petDisplayName} 猜拳！</h3>
                   {rpsState.step === 'choice' ? (
