@@ -92,6 +92,12 @@ const ACTIVITY_TEXT = {
   tired: '累壞了，氣喘吁吁...'
 };
 
+const RPS_ICONS = {
+  '剪刀': '✌️',
+  '石頭': '✊',
+  '布': '🖐️'
+};
+
 const generateQuestion = (isBoss, equipCount) => {
   const difficulty = isBoss ? 5 : Math.min(equipCount * 2, 5);
   let types = [];
@@ -104,7 +110,6 @@ const generateQuestion = (isBoss, equipCount) => {
     types = ['add_mix_3', 'sub_big', 'mul_2d_1d', 'div_basic', 'time_elapse_hard', 'mix_op', 'estimate_hundred', 'estimate_calc', 'word_div_adv', 'word_mix_boss'];
   }
 
-  // 增加魔王關卡應用題的比重
   if (isBoss) {
     types.push('word_div_adv', 'word_mix_boss', 'word_mix_boss', 'mix_op', 'word_sub_adv');
   }
@@ -149,19 +154,16 @@ const generateQuestion = (isBoss, equipCount) => {
       const digit = Math.random() > 0.5 ? '百' : '十';
       const ans = digit === '百' ? Math.floor(pv / 100) : Math.floor((pv % 100) / 10);
       return { q: `${pv} 的${digit}位數是多少？`, a: ans, unit: '', points: 25, level: '長老密碼 (Lv.3)' };
-      
     case 'estimate_ten':
       const estNum = Math.floor(Math.random() * 80) + 11; 
       const remainder = estNum % 10;
       const estAns = remainder >= 5 ? estNum - remainder + 10 : estNum - remainder;
       return { q: `${estNum} 大約是幾十？`, a: estAns, unit: '', points: 20, level: '直覺估算 (Lv.2)' };
-      
     case 'estimate_hundred':
       const estNum100 = Math.floor(Math.random() * 800) + 111; 
       const rem100 = estNum100 % 100;
       const estAns100 = rem100 >= 50 ? estNum100 - rem100 + 100 : estNum100 - rem100;
       return { q: `${estNum100} 大約是幾百？`, a: estAns100, unit: '', points: 25, level: '百位估算 (Lv.3)' };
-      
     case 'estimate_calc':
       const isAdd = Math.random() > 0.5;
       let estA = Math.floor(Math.random() * 80) + 11;
@@ -177,7 +179,6 @@ const generateQuestion = (isBoss, equipCount) => {
       } else {
         return { q: `${estA} - ${estB} 大約是多少？(先四捨五入到十位)`, a: roundA - roundB, unit: '', points: 35, level: '估算運算 (Lv.4)' };
       }
-
     case 'add_mix_3': 
       const n1 = Math.floor(Math.random() * 50) + 10;
       const n2 = Math.floor(Math.random() * 50) + 10;
@@ -204,8 +205,6 @@ const generateQuestion = (isBoss, equipCount) => {
     case 'time_elapse_hard': 
       const tStart = Math.floor(Math.random() * 8) + 1; 
       return { q: `${tStart}點半 再過 30 分鐘是幾點？`, a: tStart + 1, unit: '點', points: 40, level: '星象觀測 (Lv.5)' };
-
-    // --- 應用題區 ---
     case 'word_add_basic':
       const wa1 = Math.floor(Math.random() * 30) + 10;
       const wa2 = Math.floor(Math.random() * 20) + 10;
@@ -230,7 +229,6 @@ const generateQuestion = (isBoss, equipCount) => {
       const wmb_people = 3;
       const wmb_give = Math.floor(Math.random() * 10) + 5;
       return { q: `長老有 ${wmb_total} 顆寶石，分給 ${wmb_people} 個人每人 ${wmb_give} 顆後，長老自己還剩下幾顆？`, a: wmb_total - (wmb_people * wmb_give), unit: '顆', points: 50, level: '情境應用 (Lv.5)' };
-
     default:
       return { q: "10 + 10 = ?", a: 20, unit: '', points: 5, level: '熱身' };
   }
@@ -283,6 +281,7 @@ const MathJungleGame = () => {
 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
+  const [bossMissCount, setBossMissCount] = useState(0); // 紀錄魔王關連續失誤
   const [rpsState, setRpsState] = useState({ active: false, petId: null, step: 'choice', playerChoice: '', petChoice: '', result: '' });
   
   const [isSleepTime, setIsSleepTime] = useState(false);
@@ -467,8 +466,10 @@ const MathJungleGame = () => {
 
       let bossCounterMsg = '';
       if (isBossActive) {
-        if (Math.random() < 0.3) { 
-          if (currentEquip.length > 0 && Math.random() < 0.5) { 
+        setBossMissCount(0); // 答對重置連續失誤次數
+        // 降低正確答題時的隨機掉裝機率，現在非常罕見
+        if (Math.random() < 0.05) { 
+          if (currentEquip.length > 0 && Math.random() < 0.2) { 
             const dropIdx = Math.floor(Math.random() * currentEquip.length);
             const lostId = currentEquip[dropIdx];
             currentEquip.splice(dropIdx, 1);
@@ -481,7 +482,7 @@ const MathJungleGame = () => {
             }
             
             const itemName = ITEMS_DB.find(i => i.id === lostId).name;
-            bossCounterMsg = `魔王猛烈反擊！你的裝備【${itemName}】被打飛消失了！`;
+            bossCounterMsg = `魔王暴怒反擊！你的裝備【${itemName}】被打飛消失了！`;
           } else {
             bossCounterMsg = `魔王用力甩尾！還好你閃開了！`;
           }
@@ -496,6 +497,7 @@ const MathJungleGame = () => {
         if (newBossStreak >= BOSS_TARGET) {
           setIsBossActive(false);
           setBossStreak(0);
+          setBossMissCount(0);
           
           const bossSSRs = ITEMS_DB.filter(i => i.rarity === 'SSR' && i.source === 'boss');
           const rewardSSR = bossSSRs[Math.floor(Math.random() * bossSSRs.length)];
@@ -519,6 +521,7 @@ const MathJungleGame = () => {
         if (newTotal > 0 && newTotal % BOSS_TRIGGER_COUNT === 0) {
           setIsBossActive(true);
           setBossStreak(0);
+          setBossMissCount(0);
           setMsg("警告！暴龍王出現了！");
           setUserInput('');
           generateUniqueQuestion(true); 
@@ -531,8 +534,32 @@ const MathJungleGame = () => {
       setCombo(0);
       setUserInput('');
       if (isBossActive) {
-        setBossStreak(0); 
-        setMsg('慘了！被魔王打飛！進度歸零！(0/10)');
+        const newMiss = bossMissCount + 1;
+        if (newMiss >= 3) {
+          let currentEquip = [...equippedItems];
+          if (currentEquip.length > 0) {
+             const dropIdx = Math.floor(Math.random() * currentEquip.length);
+             const lostId = currentEquip[dropIdx];
+             currentEquip.splice(dropIdx, 1);
+             const invIndex = inventory.indexOf(lostId);
+             let newInv = [...inventory];
+             if (invIndex > -1) {
+               newInv.splice(invIndex, 1);
+               setInventory(newInv);
+             }
+             setEquippedItems(currentEquip);
+             const itemName = ITEMS_DB.find(i => i.id === lostId).name;
+             setMsg(`慘了！連續失誤被魔王抓到破綻！裝備【${itemName}】被打飛了！進度歸零！`);
+          } else {
+             setMsg('慘了！被魔王狠狠打飛！進度歸零！(0/10)');
+          }
+          setBossStreak(0);
+          setBossMissCount(0);
+        } else {
+          setBossStreak(0); 
+          setBossMissCount(newMiss);
+          setMsg(`哎呀！被魔王攻擊了！連續失誤 ${newMiss}/3 次！進度歸零！`);
+        }
       } else {
         setMsg('哎呀！被石頭絆倒了，再試一次！');
       }
@@ -727,6 +754,19 @@ const MathJungleGame = () => {
       }));
     }
   };
+
+  if (isSleepTime) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
+         <div className="text-8xl mb-6 animate-pulse">💤</div>
+         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
+         <p className="text-stone-500 font-bold leading-relaxed">
+           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
+         </p>
+         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
+      </div>
+    );
+  }
 
   const renderGame = () => {
     const hasConsumableSSR = equippedItems.some(id => {
@@ -1026,26 +1066,34 @@ const MathJungleGame = () => {
         </div>
 
         <AnimatePresence>
-          {rpsState.active && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-              <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm">
-                <h3 className="text-2xl font-black text-stone-800 mb-6">和寵物猜拳！</h3>
-                {rpsState.step === 'choice' ? (
-                  <div className="flex justify-center gap-4">
-                     <button onClick={()=>playRPS('剪刀')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">剪刀</button>
-                     <button onClick={()=>playRPS('石頭')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">石頭</button>
-                     <button onClick={()=>playRPS('布')} className="text-xl font-bold p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">布</button>
-                  </div>
-                ) : (
-                  <div>
-                     <div className="text-2xl mb-4 font-bold text-stone-700">你出 {rpsState.playerChoice} 對上 寵物出 {rpsState.petChoice}</div>
-                     <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
-                     <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
+          {rpsState.active && (() => {
+             const activePet = pets.find(p => p.instanceId === rpsState.petId);
+             const petDisplayName = activePet ? (activePet.name || PET_DATA[activePet.type].speciesName) : '寵物';
+             return (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm">
+                  <h3 className="text-2xl font-black text-stone-800 mb-6">和 {petDisplayName} 猜拳！</h3>
+                  {rpsState.step === 'choice' ? (
+                    <div className="flex justify-center gap-4">
+                       <button onClick={()=>playRPS('剪刀')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['剪刀']}</button>
+                       <button onClick={()=>playRPS('石頭')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['石頭']}</button>
+                       <button onClick={()=>playRPS('布')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['布']}</button>
+                    </div>
+                  ) : (
+                    <div>
+                       <div className="text-xl mb-4 font-bold text-stone-700 flex justify-center items-center gap-2">
+                         你出 <span className="text-4xl">{RPS_ICONS[rpsState.playerChoice]}</span> 
+                         對上 
+                         <span className="text-4xl">{RPS_ICONS[rpsState.petChoice]}</span> {petDisplayName}
+                       </div>
+                       <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
+                       <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+             );
+          })()}
         </AnimatePresence>
 
       </motion.div>
@@ -1090,7 +1138,7 @@ const MathJungleGame = () => {
         {showReward && isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl">
-              <h3 className="text-4xl font-black text-red-900 mb-2">攻擊成功！</h3>
+              <h3 className="text-4xl font-black text-red-900 mb-2">攻擊！</h3>
               <p className="text-red-700 font-bold mb-6 whitespace-pre-line">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-red-900 shadow-lg active:translate-y-2">繼續攻擊</button>
             </motion.div>
