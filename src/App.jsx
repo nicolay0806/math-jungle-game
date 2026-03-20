@@ -92,7 +92,6 @@ const ACTIVITY_TEXT = {
   tired: '累壞了，氣喘吁吁...'
 };
 
-// --- 這裡就是遺失的猜拳圖案字典！ ---
 const RPS_ICONS = {
   '剪刀': '✌️',
   '石頭': '✊',
@@ -582,6 +581,7 @@ const MathJungleGame = () => {
     }
   };
 
+  // --- 改版：抽蛋邏輯防重複寵物 ---
   const handleGacha = () => {
     if (score < 100) {
       setMsg("石幣不夠啦！快去算數學賺錢！");
@@ -595,7 +595,25 @@ const MathJungleGame = () => {
     else if (rand < 15) rarity = 'PET';
     else if (rand < 35) rarity = 'SR';
 
-    const pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
+    // 檢查寵物池是否已滿
+    if (rarity === 'PET') {
+      const ownedPetTypes = pets.map(p => p.type);
+      const availablePets = ITEMS_DB.filter(i => i.rarity === 'PET' && !ownedPetTypes.includes(i.petType));
+      
+      // 如果所有寵物都有了，把這次轉蛋機率轉換成 SR 裝備
+      if (availablePets.length === 0) {
+        rarity = 'SR';
+      }
+    }
+
+    let pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
+    
+    // 如果是抽寵物，過濾掉已擁有的
+    if (rarity === 'PET') {
+      const ownedPetTypes = pets.map(p => p.type);
+      pool = pool.filter(i => !ownedPetTypes.includes(i.petType));
+    }
+
     const item = pool[Math.floor(Math.random() * pool.length)];
     
     if (rarity === 'PET') {
@@ -780,6 +798,19 @@ const MathJungleGame = () => {
       }));
     }
   };
+
+  if (isSleepTime) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
+         <div className="text-8xl mb-6 animate-pulse">💤</div>
+         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
+         <p className="text-stone-500 font-bold leading-relaxed">
+           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
+         </p>
+         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
+      </div>
+    );
+  }
 
   const renderGame = () => {
     const hasConsumableSSR = equippedItems.some(id => {
