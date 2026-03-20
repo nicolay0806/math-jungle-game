@@ -280,6 +280,7 @@ const MathJungleGame = () => {
   const [questionHistory, setQuestionHistory] = useState([]);
   const [currentQ, setCurrentQ] = useState({ q: '準備開始！', a: 0, unit: '', points: 0, level: '' });
   const [petAssist, setPetAssist] = useState(null); 
+  const [isChecking, setIsChecking] = useState(false);
 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
@@ -291,6 +292,11 @@ const MathJungleGame = () => {
   const BOSS_TARGET = 10;
   const BOSS_TRIGGER_COUNT = 30;
   const DAILY_INTERACT_LIMIT = 20;
+
+  const hasConsumableSSR = equippedItems.some(id => {
+    const item = ITEMS_DB.find(i => i.id === id);
+    return item && item.rarity === 'SSR' && item.type === 'consumable';
+  });
 
   useEffect(() => {
     localStorage.setItem('mathJungle_score', JSON.stringify(score));
@@ -369,11 +375,6 @@ const MathJungleGame = () => {
   };
 
   useEffect(() => {
-    const activeConsumableSSR = equippedItems.find(id => {
-      const item = ITEMS_DB.find(i => i.id === id);
-      return item.rarity === 'SSR' && item.type === 'consumable';
-    });
-    
     if (activeConsumableSSR) {
       setUserInput('');
       setMsg(`神力準備就緒！請直接點擊解放神力！`);
@@ -382,6 +383,11 @@ const MathJungleGame = () => {
       setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
   }, [equippedItems, petAssist]);
+
+  const activeConsumableSSR = equippedItems.find(id => {
+    const item = ITEMS_DB.find(i => i.id === id);
+    return item && item.rarity === 'SSR' && item.type === 'consumable';
+  });
 
   const checkDailyLimit = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -404,9 +410,9 @@ const MathJungleGame = () => {
     
     equippedItems.forEach(id => {
       const item = ITEMS_DB.find(i => i.id === id);
-      if (item.rarity === 'SSR' && item.type === 'equip') itemBonus += 20; 
-      if (item.rarity === 'SR') itemBonus += 10;
-      if (item.rarity === 'S') itemBonus += 5;
+      if (item && item.rarity === 'SSR' && item.type === 'equip') itemBonus += 20; 
+      if (item && item.rarity === 'SR') itemBonus += 10;
+      if (item && item.rarity === 'S') itemBonus += 5;
     });
 
     SETS_DB.forEach(set => {
@@ -424,11 +430,27 @@ const MathJungleGame = () => {
     return { itemBonus, setBonus, activeSetNames, petBonus };
   };
 
-  const checkAnswer = () => {
+  const handleCheckAnswer = () => {
+    if (isChecking) return;
+    if (userInput === '' && !petAssist && !hasConsumableSSR) {
+      setMsg('請先輸入答案喔！');
+      return;
+    }
+
+    setIsChecking(true);
+    setMsg('石斧飛在半空中...');
+
+    setTimeout(() => {
+      setIsChecking(false);
+      executeCheckAnswerLogic();
+    }, 1200);
+  };
+
+  const executeCheckAnswerLogic = () => {
     let currentEquip = [...equippedItems];
     const usedConsumableId = currentEquip.find(id => {
       const item = ITEMS_DB.find(i => i.id === id);
-      return item.rarity === 'SSR' && item.type === 'consumable';
+      return item && item.rarity === 'SSR' && item.type === 'consumable';
     });
 
     const userVal = parseInt(userInput);
@@ -533,7 +555,6 @@ const MathJungleGame = () => {
       }
     } else {
       setCombo(0);
-      setUserInput('');
       if (isBossActive) {
         const newMiss = bossMissCount + 1;
         if (newMiss >= 3) {
@@ -581,7 +602,6 @@ const MathJungleGame = () => {
     }
   };
 
-  // --- 改版：抽蛋邏輯防重複寵物 ---
   const handleGacha = () => {
     if (score < 100) {
       setMsg("石幣不夠啦！快去算數學賺錢！");
@@ -595,25 +615,7 @@ const MathJungleGame = () => {
     else if (rand < 15) rarity = 'PET';
     else if (rand < 35) rarity = 'SR';
 
-    // 檢查寵物池是否已滿
-    if (rarity === 'PET') {
-      const ownedPetTypes = pets.map(p => p.type);
-      const availablePets = ITEMS_DB.filter(i => i.rarity === 'PET' && !ownedPetTypes.includes(i.petType));
-      
-      // 如果所有寵物都有了，把這次轉蛋機率轉換成 SR 裝備
-      if (availablePets.length === 0) {
-        rarity = 'SR';
-      }
-    }
-
-    let pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
-    
-    // 如果是抽寵物，過濾掉已擁有的
-    if (rarity === 'PET') {
-      const ownedPetTypes = pets.map(p => p.type);
-      pool = pool.filter(i => !ownedPetTypes.includes(i.petType));
-    }
-
+    const pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
     const item = pool[Math.floor(Math.random() * pool.length)];
     
     if (rarity === 'PET') {
@@ -799,25 +801,7 @@ const MathJungleGame = () => {
     }
   };
 
-  if (isSleepTime) {
-    return (
-      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
-         <div className="text-8xl mb-6 animate-pulse">💤</div>
-         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
-         <p className="text-stone-500 font-bold leading-relaxed">
-           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
-         </p>
-         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
-      </div>
-    );
-  }
-
   const renderGame = () => {
-    const hasConsumableSSR = equippedItems.some(id => {
-      const item = ITEMS_DB.find(i => i.id === id);
-      return item.rarity === 'SSR' && item.type === 'consumable';
-    });
-
     const { itemBonus, setBonus, activeSetNames } = calculatePoints();
     const totalBonus = itemBonus + setBonus;
     
@@ -879,16 +863,16 @@ const MathJungleGame = () => {
               type="number" 
               value={userInput} 
               onChange={(e) => setUserInput(e.target.value)} 
-              readOnly={hasConsumableSSR || petAssist}
-              placeholder={hasConsumableSSR || petAssist ? "鎖定中" : "?"} 
-              className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
+              readOnly={hasConsumableSSR || petAssist || isChecking}
+              placeholder={hasConsumableSSR || petAssist ? "鎖定中" : (isChecking ? "..." : "?")} 
+              className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist || isChecking) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
             />
           </div>
-          <button onClick={checkAnswer} disabled={showReward || showBossVictory} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
-            {petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`))}
+          <button onClick={handleCheckAnswer} disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
+            {isChecking ? '確認中...' : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
           </button>
         </div>
-        <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
+        <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center justify-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
         </p>
         {!isBossActive && (
@@ -909,7 +893,7 @@ const MathJungleGame = () => {
         {gachaResult && (
           <motion.div initial={{ scale: 0, rotate: 180 }} animate={{ scale: 1, rotate: 0 }} className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center p-4 z-20">
             <div className={`text-sm font-bold mb-2 ${gachaResult.rarity === 'SSR' ? 'text-purple-600' : gachaResult.rarity === 'SR' ? 'text-red-500' : gachaResult.rarity === 'PET' ? 'text-blue-500' : 'text-green-600'}`}>
-              {gachaResult.rarity === 'SSR' ? '傳說' : gachaResult.rarity === 'SR' ? '稀有' : gachaResult.rarity === 'PET' ? '神秘寵物' : '實用'}
+              {gachaResult.rarity === 'SSR' ? '傳說' : gachaResult.rarity === 'SR' ? '稀弱' : gachaResult.rarity === 'PET' ? '神秘寵物' : '實用'}
             </div>
             <div className="text-8xl mb-4">{gachaResult.icon}</div>
             <h3 className="text-2xl font-black text-stone-800 mb-2">{gachaResult.name}</h3>
@@ -1121,98 +1105,4 @@ const MathJungleGame = () => {
                     <div className="flex justify-center gap-4">
                        <button onClick={()=>playRPS('剪刀')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['剪刀']}</button>
                        <button onClick={()=>playRPS('石頭')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['石頭']}</button>
-                       <button onClick={()=>playRPS('布')} className="text-5xl p-4 bg-stone-100 rounded-xl hover:bg-stone-200 border-4 border-stone-300 active:translate-y-1">{RPS_ICONS['布']}</button>
-                    </div>
-                  ) : (
-                    <div>
-                       <div className="text-xl mb-4 font-bold text-stone-700 flex justify-center items-center gap-2">
-                         你出 <span className="text-4xl">{RPS_ICONS[rpsState.playerChoice]}</span> 
-                         對上 
-                         <span className="text-4xl">{RPS_ICONS[rpsState.petChoice]}</span> {petDisplayName}
-                       </div>
-                       <div className="text-2xl font-black text-orange-600 mb-6">{rpsState.result}</div>
-                       <button onClick={closeRPS} className="bg-orange-500 text-white font-bold py-3 px-8 rounded-xl active:translate-y-1 border-b-4 border-orange-700">結束</button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-             );
-          })()}
-        </AnimatePresence>
-
-      </motion.div>
-    );
-  };
-
-  return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-4 font-mono overflow-hidden relative selection:bg-orange-300 transition-colors duration-1000 ${isBossActive ? 'bg-red-950' : 'bg-amber-100'}`}>
-      <div className="w-full max-w-lg flex justify-between items-center mb-6 z-20 px-2">
-        <div className="bg-stone-800 text-yellow-400 px-4 py-2 rounded-xl border-4 border-stone-600 shadow-md font-black text-xl flex items-center gap-2"> {score}</div>
-        <div className="flex gap-2">
-          <button onClick={() => setView('pet')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-orange-500 border-orange-700'}`}>
-            寵物
-            {pets.some(p => p.stage === 3 && (p.friendshipLevel || 0) >= 1) && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span></span>}
-          </button>
-          <button onClick={() => setView('gacha')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-green-600 border-green-800'}`}> 抽蛋</button>
-          <button onClick={() => setView('bag')} disabled={isBossActive} className={`text-white px-2 py-2 rounded-xl border-b-4 font-bold active:translate-y-1 shadow-md text-sm relative ${isBossActive ? 'bg-gray-500 border-gray-700 opacity-50' : 'bg-blue-600 border-blue-800'}`}>
-            背包
-            {equippedItems.length > 0 && <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">{equippedItems.length}</span>}
-          </button>
-        </div>
-      </div>
-      
-      {view === 'game' && renderGame()}
-      {view === 'gacha' && renderGacha()}
-      {view === 'bag' && renderBag()}
-      {view === 'pet' && renderPetRoom()}
-      
-      <AnimatePresence>
-        {showReward && !isBossActive && !showBossVictory && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-yellow-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-orange-500 shadow-2xl">
-              <h3 className="text-4xl font-black text-stone-800 mb-2">過關！</h3>
-              <p className="text-stone-600 font-bold mb-6">{msg}</p>
-              <button onClick={nextLevel} className="w-full bg-green-500 text-white font-black py-4 rounded-2xl text-xl border-4 border-green-800 shadow-lg active:translate-y-2">繼續狩獵</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showReward && isBossActive && !showBossVictory && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl">
-              <h3 className="text-4xl font-black text-red-900 mb-2">攻擊成功！</h3>
-              <p className="text-red-700 font-bold mb-6 whitespace-pre-line">{msg}</p>
-              <button onClick={nextLevel} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-red-900 shadow-lg active:translate-y-2">繼續攻擊</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showBossVictory && bossRewardItem && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5, rotate: 360 }} animate={{ scale: 1, rotate: 0 }} className="bg-purple-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.8)] relative">
-              <div className="absolute inset-0 bg-purple-300 opacity-20 animate-pulse rounded-[2.5rem]"></div>
-              <h3 className="text-3xl font-black text-purple-900 mb-2 z-10 relative">魔王擊破！</h3>
-              <p className="text-stone-600 font-bold mb-4 z-10 relative">太強了！這是給勇者的保底獎勵</p>
-              
-              <div className="bg-white p-6 rounded-xl border-4 border-purple-300 mb-6 z-10 relative shadow-inner">
-                <p className="text-purple-600 font-black text-sm mb-2">獲得魔王專屬傳說神器</p>
-                <div className="text-7xl mb-2 animate-bounce">{bossRewardItem.icon}</div>
-                <p className="text-2xl font-black text-stone-800">{bossRewardItem.name}</p>
-                <p className="text-xs text-stone-500 mt-1">{bossRewardItem.desc}</p>
-                <p className="text-xs text-green-600 mt-2 font-bold">(已放入背包)</p>
-              </div>
-              
-              <button onClick={nextLevel} className="w-full relative z-10 bg-purple-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-purple-900 shadow-lg active:translate-y-2">收下裝備</button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-export default MathJungleGame;
+                       <button onClick={()=>playRPS('布')} className="text
