@@ -40,7 +40,7 @@ const ITEMS_DB = [
   { id: 23, name: '堅硬果殼', rarity: 'S', icon: '🥥', effect: '分數+5', desc: '做成樂器。 【野餐套裝C】', source: 'gacha', type: 'equip' },
   { id: 24, name: '彩色貝殼', rarity: 'S', icon: '🐚', effect: '分數+5', desc: '海浪聲音。', source: 'gacha', type: 'equip' },
   { id: 25, name: '強韌藤蔓', rarity: 'S', icon: '➰', effect: '分數+5', desc: '非常結實。', source: 'gacha', type: 'equip' },
-  { id: 26, name: '石製湯匙', rarity: 'S', icon: '🥄', effect: '分數+5', desc: '喝湯方便。 【野餐套裝B】', source: 'gacha', type: 'equip' },
+  { id: 26, name: '石製湯匙', rarity: 'S', icon: '🥄', effect: '分數+5', desc: '喝湯方便. 【野餐套裝B】', source: 'gacha', type: 'equip' },
   { id: 27, name: '野果籃', rarity: 'S', icon: '🧺', effect: '美味餵食', desc: '滿滿的果實可餵寵物。', source: 'gacha', type: 'food', isFood: true, foodValue: 2 },
   
   { id: 44, name: '鮮嫩翼龍排', rarity: 'SR', icon: '🥩', effect: '大幅成長', desc: '極品美食，寵物超愛。', source: 'gacha', type: 'food', isFood: true, foodValue: 5 },
@@ -294,11 +294,6 @@ const MathJungleGame = () => {
   const BOSS_TRIGGER_COUNT = 30;
   const DAILY_INTERACT_LIMIT = 20;
 
-  const hasConsumableSSR = equippedItems.some(id => {
-    const item = ITEMS_DB.find(i => i.id === id);
-    return item && item.rarity === 'SSR' && item.type === 'consumable';
-  });
-
   useEffect(() => {
     localStorage.setItem('mathJungle_score', JSON.stringify(score));
     localStorage.setItem('mathJungle_inventory', JSON.stringify(inventory));
@@ -375,6 +370,11 @@ const MathJungleGame = () => {
     }
   };
 
+  const hasConsumableSSR = equippedItems.some(id => {
+    const item = ITEMS_DB.find(i => i.id === id);
+    return item && item.rarity === 'SSR' && item.type === 'consumable';
+  });
+
   useEffect(() => {
     if (hasConsumableSSR) {
       setUserInput('');
@@ -383,34 +383,7 @@ const MathJungleGame = () => {
       setUserInput('');
       setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
-  }, [hasConsumableSSR, petAssist]);
-
-  const calculatePoints = () => {
-    let itemBonus = 0;
-    let setBonus = 0;
-    let activeSetNames = [];
-    
-    equippedItems.forEach(id => {
-      const item = ITEMS_DB.find(i => i.id === id);
-      if (item && item.rarity === 'SSR' && item.type === 'equip') itemBonus += 20; 
-      if (item && item.rarity === 'SR') itemBonus += 10;
-      if (item && item.rarity === 'S') itemBonus += 5;
-    });
-
-    SETS_DB.forEach(set => {
-      if (set.ids.every(reqId => equippedItems.includes(reqId))) {
-        setBonus += set.bonus;
-        activeSetNames.push(set.name);
-      }
-    });
-
-    let petBonus = 0;
-    pets.forEach(pet => {
-      if (pet.stage === 3) petBonus += 10;
-    });
-
-    return { itemBonus, setBonus, activeSetNames, petBonus };
-  };
+  }, [equippedItems, petAssist, hasConsumableSSR]);
 
   const handleCheckAnswer = () => {
     if (isChecking) return;
@@ -419,7 +392,7 @@ const MathJungleGame = () => {
       return;
     }
 
-    const checkMsgs = ['石斧飛行中...', '瞄準目標...', '翻閱石板...', '集氣中...', '緊張緊張...'];
+    const checkMsgs = ['石斧飛行中...', '瞄準目標...', '翻閱石板...', '緊張緊張...', '氣功集氣...'];
     setCheckText(checkMsgs[Math.floor(Math.random() * checkMsgs.length)]);
     setIsChecking(true);
     setMsg('等待判定...');
@@ -803,7 +776,9 @@ const MathJungleGame = () => {
     const totalBonus = itemBonus + setBonus;
     
     const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasConsumableSSR ? 'bg-purple-100 border-purple-500' : (petAssist ? 'bg-yellow-100 border-yellow-500' : 'bg-stone-200 border-stone-700'));
-    const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : (petAssist ? 'bg-yellow-500 border-yellow-800 hover:bg-yellow-400 text-stone-900' : 'bg-orange-500 border-stone-800 hover:bg-orange-400'));
+    
+    // 判定中的按鈕樣式，加入 ring-orange-500 以顯示能量環
+    const btnClass = isChecking ? 'bg-orange-400 border-stone-800 text-stone-900 ring-2 ring-orange-500' : (isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500 text-white' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500 text-white' : (petAssist ? 'bg-yellow-500 border-yellow-800 hover:bg-yellow-400 text-stone-900' : 'bg-orange-500 border-stone-800 hover:bg-orange-400 text-white')));
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md flex flex-col items-center relative z-10">
@@ -833,6 +808,7 @@ const MathJungleGame = () => {
           <div className="flex gap-2 mb-4 min-h-[50px]">
             {equippedItems.map((id, index) => {
               const item = ITEMS_DB.find(i => i.id === id);
+              if (!item) return null;
               const isInActiveSet = SETS_DB.some(set => activeSetNames.includes(set.name) && set.ids.includes(id));
               return (
                 <motion.div key={index} initial={{ scale: 0 }} animate={{ scale: 1 }} className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-2xl shadow-md relative ${isInActiveSet ? 'bg-yellow-200 border-orange-500 ring-2 ring-yellow-400' : 'bg-stone-800 border-stone-500'}`}>
@@ -865,14 +841,32 @@ const MathJungleGame = () => {
               className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist || isChecking) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
             />
           </div>
-          <motion.button 
-            animate={isChecking ? { scale: [1, 1.05, 1], transition: { duration: 0.5, repeat: Infinity } } : {}}
-            onClick={handleCheckAnswer} 
-            disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} 
-            className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}
-          >
-            {isChecking ? checkText : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
-          </motion.button>
+          {/* 優化後的按鈕動態 */}
+          <div className="relative w-full">
+             <motion.button 
+               whileTap={{ scale: 0.95, translateY: 4 }} // 按下的凹陷感
+               animate={isChecking ? { 
+                 scale: [1, 1.1, 1.05, 1.1, 1], // 強烈縮放脈衝
+                 rotate: [0, 5, -5, 5, -5, 0], // 強烈抖動
+                 opacity: [1, 0.7, 1], // 明暗呼吸閃爍
+                 transition: { duration: 0.6, repeat: Infinity } 
+               } : {}}
+               onClick={handleCheckAnswer} 
+               disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} 
+               className={`relative w-full font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none transition-all duration-150 z-10 ${btnClass}`}
+             >
+               {isChecking ? checkText : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
+             </motion.button>
+             {/* 能量環效果 */}
+             {isChecking && (
+               <motion.div 
+                 initial={{ scale: 1, opacity: 0.8 }}
+                 animate={{ scale: 1.5, opacity: 0 }}
+                 transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
+                 className="absolute inset-0 rounded-2xl bg-orange-400 z-0"
+               />
+             )}
+          </div>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center justify-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
@@ -926,6 +920,7 @@ const MathJungleGame = () => {
           ) : (
             uniqueItems.map(id => {
               const item = ITEMS_DB.find(i => i.id === id);
+              if (!item) return null;
               const ownedCount = inventory.filter(i => i === id).length;
               const equippedCount = equippedItems.filter(i => i === id).length;
               const isMaxEquipped = equippedItems.length >= 3;
@@ -987,6 +982,7 @@ const MathJungleGame = () => {
             {availableFoods.length === 0 ? <span className="text-xs text-stone-500">背包裡沒有食物...去抽蛋吧！</span> : 
               availableFoods.map(id => {
                 const item = ITEMS_DB.find(i => i.id === id);
+                if (!item) return null;
                 const count = inventory.filter(f => f === id).length;
                 return (
                   <div key={id} className="bg-white px-2 py-1 rounded shadow-sm text-xs font-bold border border-stone-200">
@@ -1075,6 +1071,7 @@ const MathJungleGame = () => {
                     </button>
                     {pet.stage < 3 && availableFoods.map(foodId => {
                       const item = ITEMS_DB.find(i => i.id === foodId);
+                      if (!item) return null;
                       if (item.isTransform && pet.hasMutated) return null;
                       
                       return (
@@ -1101,7 +1098,7 @@ const MathJungleGame = () => {
              const petDisplayName = activePet ? (activePet.name || PET_DATA[activePet.type].speciesName) : '寵物';
              return (
               <motion.div key="rps-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm">
+                <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm overflow-hidden">
                   <h3 className="text-2xl font-black text-stone-800 mb-6">和 {petDisplayName} 猜拳！</h3>
                   {rpsState.step === 'choice' ? (
                     <div className="flex justify-center gap-4">
@@ -1155,7 +1152,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showReward && !isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-yellow-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-orange-500 shadow-2xl">
+            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-yellow-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-orange-500 shadow-2xl overflow-hidden">
               <h3 className="text-4xl font-black text-stone-800 mb-2">過關！</h3>
               <p className="text-stone-600 font-bold mb-6">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-green-500 text-white font-black py-4 rounded-2xl text-xl border-4 border-green-800 shadow-lg active:translate-y-2">繼續狩獵</button>
@@ -1167,7 +1164,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showReward && isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl">
+            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl overflow-hidden">
               <h3 className="text-4xl font-black text-red-900 mb-2">攻擊成功！</h3>
               <p className="text-red-700 font-bold mb-6 whitespace-pre-line">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-red-900 shadow-lg active:translate-y-2">繼續攻擊</button>
@@ -1179,7 +1176,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showBossVictory && bossRewardItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5, rotate: 360 }} animate={{ scale: 1, rotate: 0 }} className="bg-purple-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.8)] relative">
+            <motion.div initial={{ scale: 0.5, rotate: 360 }} animate={{ scale: 1, rotate: 0 }} className="bg-purple-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.8)] relative overflow-hidden">
               <div className="absolute inset-0 bg-purple-300 opacity-20 animate-pulse rounded-[2.5rem]"></div>
               <h3 className="text-3xl font-black text-purple-900 mb-2 z-10 relative">魔王擊破！</h3>
               <p className="text-stone-600 font-bold mb-4 z-10 relative">太強了！這是給勇者的保底獎勵</p>
