@@ -335,17 +335,10 @@ const MathJungleGame = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setPets(prevPets => prevPets.map(pet => {
-        const currentEnergy = pet.energy !== undefined ? pet.energy : 5;
-        const newEnergy = Math.min(5, currentEnergy + 1);
+        const newEnergy = Math.min(5, (pet.energy ?? 5) + 1);
         const acts = ['idle', 'sleeping', 'wandering', 'corner', 'running', 'scratching', 'watching', 'sniffing', 'yawning', 'rolling', 'cleaning'];
         const randomAct = acts[Math.floor(Math.random() * acts.length)];
-        
-        let nextAct = randomAct;
-        if (pet.activity && (pet.activity === 'eating' || pet.activity === 'fetching' || pet.activity === 'petting' || pet.activity === 'bathing' || pet.activity.startsWith('rps'))) {
-          nextAct = pet.activity;
-        }
-
-        return { ...pet, energy: newEnergy, activity: nextAct };
+        return { ...pet, energy: newEnergy, activity: (pet.activity === 'eating' || pet.activity === 'fetching' || pet.activity === 'petting' || pet.activity === 'bathing' || pet.activity?.startsWith('rps')) ? pet.activity : randomAct };
       }));
     }, 10000);
     return () => clearInterval(timer);
@@ -374,8 +367,8 @@ const MathJungleGame = () => {
     
     const capablePets = pets.filter(p => p.stage === 3 && (p.friendshipLevel || 0) >= 1);
     if (capablePets.length > 0) {
-        const bestPet = capablePets.reduce((prev, curr) => ((prev.friendshipLevel || 0) > (curr.friendshipLevel || 0)) ? prev : curr);
-        const chance = Math.min(0.10 + ((bestPet.friendshipLevel || 0) * 0.02), 0.50);
+        const bestPet = capablePets.reduce((prev, curr) => (prev.friendshipLevel > curr.friendshipLevel) ? prev : curr);
+        const chance = Math.min(0.10 + (bestPet.friendshipLevel * 0.02), 0.50);
         if (Math.random() < chance) {
             setPetAssist(bestPet);
         }
@@ -385,27 +378,12 @@ const MathJungleGame = () => {
   useEffect(() => {
     if (hasConsumableSSR) {
       setUserInput('');
-      setMsg("神力準備就緒！請直接點擊解放神力！");
+      setMsg(`神力準備就緒！請直接點擊解放神力！`);
     } else if (petAssist) {
       setUserInput('');
-      const petName = petAssist.name || PET_DATA[petAssist.type].speciesName;
-      setMsg("你的夥伴 " + petName + " 衝出來想幫忙！點擊讓牠解答！");
+      setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
-  }, [equippedItems, petAssist, hasConsumableSSR]);
-
-  const checkDailyLimit = () => {
-    const today = new Date().toISOString().split('T')[0];
-    let currentStats = dailyStats;
-    if (currentStats.date !== today) {
-       currentStats = { date: today, count: 0 };
-    }
-    if (currentStats.count >= DAILY_INTERACT_LIMIT) {
-       alert('今天已經跟寵物互動太多次了，讓牠好好睡個覺休息一下吧！');
-       return false;
-    }
-    setDailyStats({ date: today, count: currentStats.count + 1 });
-    return true;
-  };
+  }, [hasConsumableSSR, petAssist]);
 
   const calculatePoints = () => {
     let itemBonus = 0;
@@ -441,7 +419,7 @@ const MathJungleGame = () => {
       return;
     }
 
-    const checkMsgs = ['石斧飛行中...', '瞄準目標...', '翻閱石板...', '緊張緊張...', '氣功集氣...'];
+    const checkMsgs = ['石斧飛行中...', '瞄準目標...', '翻閱石板...', '集氣中...', '緊張緊張...'];
     setCheckText(checkMsgs[Math.floor(Math.random() * checkMsgs.length)]);
     setIsChecking(true);
     setMsg('等待判定...');
@@ -476,10 +454,10 @@ const MathJungleGame = () => {
       setScore(score + finalPoints);
       
       let detailMsg = '';
-      if (activeSetNames.length > 0) detailMsg += "【" + activeSetNames.join('+') + "】啟動！";
-      if (setBonus > 0) detailMsg += " 套裝+" + setBonus + "分！";
-      else if (itemBonus > 0) detailMsg += " 裝備+" + itemBonus + "分！";
-      if (petBonus > 0) detailMsg += " 寵物協助+" + petBonus + "分！";
+      if (activeSetNames.length > 0) detailMsg += `【${activeSetNames.join('+')}】啟動！`;
+      if (setBonus > 0) detailMsg += ` 套裝+${setBonus}分！`;
+      else if (itemBonus > 0) detailMsg += ` 裝備+${itemBonus}分！`;
+      if (petBonus > 0) detailMsg += ` 寵物協助+${petBonus}分！`;
       
       if (usedConsumableId) {
         const itemIndexInInv = inventory.indexOf(usedConsumableId);
@@ -489,10 +467,9 @@ const MathJungleGame = () => {
           setInventory(newInv);
         }
         currentEquip = currentEquip.filter(id => id !== usedConsumableId);
-        detailMsg = "神器碎裂了... 原來答案是 " + currentQ.a + "！";
+        detailMsg = `神器碎裂了... 原來答案是 ${currentQ.a}！`;
       } else if (petAssist) {
-        const pName = petAssist.name || PET_DATA[petAssist.type].speciesName;
-        detailMsg = pName + " 幫你完美解開了這題！原來是 " + currentQ.a + "！";
+        detailMsg = `${petAssist.name || PET_DATA[petAssist.type].speciesName} 幫你完美解開了這題！原來是 ${currentQ.a}！`;
       }
 
       let bossCounterMsg = '';
@@ -512,9 +489,9 @@ const MathJungleGame = () => {
             }
             
             const itemName = ITEMS_DB.find(i => i.id === lostId).name;
-            bossCounterMsg = "魔王暴怒反擊！你的裝備【" + itemName + "】被打飛消失了！";
+            bossCounterMsg = `魔王暴怒反擊！你的裝備【${itemName}】被打飛消失了！`;
           } else {
-            bossCounterMsg = "魔王用力甩尾！還好你閃開了！";
+            bossCounterMsg = `魔王用力甩尾！還好你閃開了！`;
           }
         }
       }
@@ -539,9 +516,9 @@ const MathJungleGame = () => {
         } else {
           setShowReward(true);
           setCombo(combo + 1);
-          let finalMsg = "魔王受傷了！(" + newBossStreak + "/" + BOSS_TARGET + ")";
-          if (bossCounterMsg) finalMsg += "\n" + bossCounterMsg;
-          else finalMsg += "\n" + detailMsg;
+          let finalMsg = `魔王受傷了！(${newBossStreak}/${BOSS_TARGET})`;
+          if (bossCounterMsg) finalMsg += `\n${bossCounterMsg}`;
+          else finalMsg += `\n${detailMsg}`;
           setMsg(finalMsg);
         }
       } else {
@@ -557,7 +534,7 @@ const MathJungleGame = () => {
           generateUniqueQuestion(true); 
         } else {
           setShowReward(true);
-          setMsg("答對啦！" + detailMsg);
+          setMsg(`答對啦！` + detailMsg);
         }
       }
     } else {
@@ -578,7 +555,7 @@ const MathJungleGame = () => {
              }
              setEquippedItems(currentEquip);
              const itemName = ITEMS_DB.find(i => i.id === lostId).name;
-             setMsg("慘了！連續失誤被魔王抓到破綻！裝備【" + itemName + "】被打飛了！進度歸零！");
+             setMsg(`慘了！連續失誤被魔王抓到破綻！裝備【${itemName}】被打飛了！進度歸零！`);
           } else {
              setMsg('慘了！被魔王狠狠打飛！進度歸零！(0/10)');
           }
@@ -587,7 +564,7 @@ const MathJungleGame = () => {
         } else {
           setBossStreak(0); 
           setBossMissCount(newMiss);
-          setMsg("哎呀！被魔王攻擊了！連續失誤 " + newMiss + "/3 次！進度歸零！");
+          setMsg(`哎呀！被魔王攻擊了！連續失誤 ${newMiss}/3 次！進度歸零！`);
         }
       } else {
         setMsg('哎呀！被石頭絆倒了，再試一次！');
@@ -622,22 +599,7 @@ const MathJungleGame = () => {
     else if (rand < 15) rarity = 'PET';
     else if (rand < 35) rarity = 'SR';
 
-    if (rarity === 'PET') {
-      const ownedPetTypes = pets.map(p => p.type);
-      const availablePets = ITEMS_DB.filter(i => i.rarity === 'PET' && !ownedPetTypes.includes(i.petType));
-      
-      if (availablePets.length === 0) {
-        rarity = 'SR';
-      }
-    }
-
-    let pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
-    
-    if (rarity === 'PET') {
-      const ownedPetTypes = pets.map(p => p.type);
-      pool = pool.filter(i => !ownedPetTypes.includes(i.petType));
-    }
-
+    const pool = ITEMS_DB.filter(i => i.rarity === rarity && i.source === 'gacha');
     const item = pool[Math.floor(Math.random() * pool.length)];
     
     if (rarity === 'PET') {
@@ -687,10 +649,8 @@ const MathJungleGame = () => {
 
   const interactPet = (petInstanceId, actionType) => {
     const targetPet = pets.find(p => p.instanceId === petInstanceId);
-    const currentEnergy = targetPet.energy !== undefined ? targetPet.energy : 5;
-    if (currentEnergy <= 0) {
-        const pName = targetPet.name || '寵物';
-        alert(pName + " 累壞了，不理你。請等牠休息或餵食補充體力！");
+    if ((targetPet.energy ?? 5) <= 0) {
+        alert(`${targetPet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
         setPets(prevPets => prevPets.map(pet => pet.instanceId === petInstanceId ? { ...pet, activity: 'tired' } : pet));
         return;
     }
@@ -716,8 +676,8 @@ const MathJungleGame = () => {
         if (actionType === 'bathe') { act = 'bathing'; expGained = 3; }
         
         if (!canGain) expGained = 0;
-        const e = pet.energy !== undefined ? pet.energy : 5;
-        return { ...processFriendshipGain(pet, expGained), activity: act, energy: e - 1 };
+        
+        return { ...processFriendshipGain(pet, expGained), activity: act, energy: (pet.energy ?? 5) - 1 };
       }
       return pet;
     }));
@@ -725,10 +685,8 @@ const MathJungleGame = () => {
 
   const startRPS = (petInstanceId) => {
     const targetPet = pets.find(p => p.instanceId === petInstanceId);
-    const currentEnergy = targetPet.energy !== undefined ? targetPet.energy : 5;
-    if (currentEnergy <= 0) {
-        const pName = targetPet.name || '寵物';
-        alert(pName + " 累壞了，不理你。請等牠休息或餵食補充體力！");
+    if ((targetPet.energy ?? 5) <= 0) {
+        alert(`${targetPet.name || '寵物'}累壞了，不理你。請等牠休息或餵食補充體力！`);
         setPets(prevPets => prevPets.map(pet => pet.instanceId === petInstanceId ? { ...pet, activity: 'tired' } : pet));
         return;
     }
@@ -778,8 +736,7 @@ const MathJungleGame = () => {
     setPets(prevPets => prevPets.map(pet => {
       if (pet.instanceId === rpsState.petId) {
         const finalExp = canGain ? expGained : 0;
-        const e = pet.energy !== undefined ? pet.energy : 5;
-        return { ...processFriendshipGain(pet, finalExp), activity: act, energy: e - 1 };
+        return { ...processFriendshipGain(pet, finalExp), activity: act, energy: (pet.energy ?? 5) - 1 };
       }
       return pet;
     }));
@@ -811,7 +768,7 @@ const MathJungleGame = () => {
             }
             newMutationTrait = MUTATION_TRAITS[Math.floor(Math.random() * MUTATION_TRAITS.length)];
             hasMutated = true;
-            alert("突變成功！寵物獲得了【" + newMutationTrait.name + "】屬性！\n" + newMutationTrait.desc);
+            alert(`突變成功！寵物獲得了【${newMutationTrait.name}】屬性！\n${newMutationTrait.desc}`);
           }
           
           const foodVal = item.foodValue || 1;
@@ -821,8 +778,7 @@ const MathJungleGame = () => {
           if (newFedCount >= 50) newStage = 3;
           else if (newFedCount >= 20) newStage = 2;
           
-          const e = pet.energy !== undefined ? pet.energy : 5;
-          return { ...processFriendshipGain(pet, 2), fedCount: newFedCount, stage: newStage, activity: 'eating', energy: Math.min(5, e + 2), mutationTrait: newMutationTrait, hasMutated: hasMutated };
+          return { ...processFriendshipGain(pet, 2), fedCount: newFedCount, stage: newStage, activity: 'eating', energy: Math.min(5, (pet.energy ?? 5) + 2), mutationTrait: newMutationTrait, hasMutated: hasMutated };
         }
         return pet;
       }));
@@ -847,18 +803,7 @@ const MathJungleGame = () => {
     const totalBonus = itemBonus + setBonus;
     
     const bgClass = isBossActive ? 'bg-red-900 border-red-500' : (hasConsumableSSR ? 'bg-purple-100 border-purple-500' : (petAssist ? 'bg-yellow-100 border-yellow-500' : 'bg-stone-200 border-stone-700'));
-    
-    const btnClass = isChecking ? 'bg-orange-400 border-stone-800 text-stone-900 ring-2 ring-orange-500' : (isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500 text-white' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500 text-white' : (petAssist ? 'bg-yellow-500 border-yellow-800 hover:bg-yellow-400 text-stone-900' : 'bg-orange-500 border-stone-800 hover:bg-orange-400 text-white')));
-
-    let btnText = '擲出石斧！';
-    if (totalBonus > 0) btnText += '(+' + totalBonus + ')';
-    if (isBossActive) btnText = '攻擊魔王！';
-    if (hasConsumableSSR) btnText = '神力解放 (消耗)';
-    if (petAssist) {
-      const pName = petAssist.name || PET_DATA[petAssist.type].speciesName;
-      btnText = "讓 " + pName + " 解題！";
-    }
-    if (isChecking) btnText = checkText;
+    const btnClass = isBossActive ? 'bg-red-600 border-red-900 hover:bg-red-500' : (hasConsumableSSR ? 'bg-purple-600 border-purple-900 hover:bg-purple-500' : (petAssist ? 'bg-yellow-500 border-yellow-800 hover:bg-yellow-400 text-stone-900' : 'bg-orange-500 border-stone-800 hover:bg-orange-400'));
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md flex flex-col items-center relative z-10">
@@ -888,7 +833,6 @@ const MathJungleGame = () => {
           <div className="flex gap-2 mb-4 min-h-[50px]">
             {equippedItems.map((id, index) => {
               const item = ITEMS_DB.find(i => i.id === id);
-              if (!item) return null;
               const isInActiveSet = SETS_DB.some(set => activeSetNames.includes(set.name) && set.ids.includes(id));
               return (
                 <motion.div key={index} initial={{ scale: 0 }} animate={{ scale: 1 }} className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-2xl shadow-md relative ${isInActiveSet ? 'bg-yellow-200 border-orange-500 ring-2 ring-yellow-400' : 'bg-stone-800 border-stone-500'}`}>
@@ -921,30 +865,14 @@ const MathJungleGame = () => {
               className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist || isChecking) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
             />
           </div>
-          <div className="relative w-full">
-             <motion.button 
-               whileTap={{ scale: 0.95, y: 4 }}
-               animate={isChecking ? { 
-                 scale: [1, 1.1, 1.05, 1.1, 1], 
-                 rotate: [0, 5, -5, 5, -5, 0], 
-                 opacity: [1, 0.7, 1]
-               } : {}}
-               transition={isChecking ? { duration: 0.6, repeat: Infinity } : {}}
-               onClick={handleCheckAnswer} 
-               disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} 
-               className={`relative w-full font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none z-10 ${btnClass}`}
-             >
-               {btnText}
-             </motion.button>
-             {isChecking && (
-               <motion.div 
-                 initial={{ scale: 1, opacity: 0.8 }}
-                 animate={{ scale: 1.5, opacity: 0 }}
-                 transition={{ duration: 1, repeat: Infinity, ease: "easeOut" }}
-                 className="absolute inset-0 rounded-2xl bg-orange-400 z-0 pointer-events-none"
-               />
-             )}
-          </div>
+          <motion.button 
+            animate={isChecking ? { scale: [1, 1.05, 1], transition: { duration: 0.5, repeat: Infinity } } : {}}
+            onClick={handleCheckAnswer} 
+            disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} 
+            className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}
+          >
+            {isChecking ? checkText : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
+          </motion.button>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center justify-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
@@ -998,7 +926,6 @@ const MathJungleGame = () => {
           ) : (
             uniqueItems.map(id => {
               const item = ITEMS_DB.find(i => i.id === id);
-              if (!item) return null;
               const ownedCount = inventory.filter(i => i === id).length;
               const equippedCount = equippedItems.filter(i => i === id).length;
               const isMaxEquipped = equippedItems.length >= 3;
@@ -1060,7 +987,6 @@ const MathJungleGame = () => {
             {availableFoods.length === 0 ? <span className="text-xs text-stone-500">背包裡沒有食物...去抽蛋吧！</span> : 
               availableFoods.map(id => {
                 const item = ITEMS_DB.find(i => i.id === id);
-                if (!item) return null;
                 const count = inventory.filter(f => f === id).length;
                 return (
                   <div key={id} className="bg-white px-2 py-1 rounded shadow-sm text-xs font-bold border border-stone-200">
@@ -1087,7 +1013,7 @@ const MathJungleGame = () => {
               const reqExp = 100 + (currentLevel * 50);
 
               const statusText = ACTIVITY_TEXT[pet.activity || 'idle'];
-              const energyDisplay = Array(5).fill(0).map((_, i) => i < (pet.energy !== undefined ? pet.energy : 5) ? '❤️' : '🤍').join('');
+              const energyDisplay = Array(5).fill(0).map((_, i) => i < (pet.energy ?? 5) ? '❤️' : '🤍').join('');
               
               return (
                 <div key={pet.instanceId} className="bg-white p-4 rounded-2xl border-4 border-green-600 shadow-md relative">
@@ -1149,7 +1075,6 @@ const MathJungleGame = () => {
                     </button>
                     {pet.stage < 3 && availableFoods.map(foodId => {
                       const item = ITEMS_DB.find(i => i.id === foodId);
-                      if (!item) return null;
                       if (item.isTransform && pet.hasMutated) return null;
                       
                       return (
@@ -1176,7 +1101,7 @@ const MathJungleGame = () => {
              const petDisplayName = activePet ? (activePet.name || PET_DATA[activePet.type].speciesName) : '寵物';
              return (
               <motion.div key="rps-modal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm overflow-hidden">
+                <div className="bg-white p-8 rounded-3xl border-8 border-orange-400 text-center w-full max-w-sm">
                   <h3 className="text-2xl font-black text-stone-800 mb-6">和 {petDisplayName} 猜拳！</h3>
                   {rpsState.step === 'choice' ? (
                     <div className="flex justify-center gap-4">
@@ -1230,7 +1155,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showReward && !isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-yellow-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-orange-500 shadow-2xl overflow-hidden">
+            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-yellow-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-orange-500 shadow-2xl">
               <h3 className="text-4xl font-black text-stone-800 mb-2">過關！</h3>
               <p className="text-stone-600 font-bold mb-6">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-green-500 text-white font-black py-4 rounded-2xl text-xl border-4 border-green-800 shadow-lg active:translate-y-2">繼續狩獵</button>
@@ -1242,7 +1167,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showReward && isBossActive && !showBossVictory && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl overflow-hidden">
+            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} className="bg-red-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-red-600 shadow-2xl">
               <h3 className="text-4xl font-black text-red-900 mb-2">攻擊成功！</h3>
               <p className="text-red-700 font-bold mb-6 whitespace-pre-line">{msg}</p>
               <button onClick={nextLevel} className="w-full bg-red-600 text-white font-black py-4 rounded-2xl text-xl border-4 border-red-900 shadow-lg active:translate-y-2">繼續攻擊</button>
@@ -1254,7 +1179,7 @@ const MathJungleGame = () => {
       <AnimatePresence>
         {showBossVictory && bossRewardItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5, rotate: 360 }} animate={{ scale: 1, rotate: 0 }} className="bg-purple-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.8)] relative overflow-hidden">
+            <motion.div initial={{ scale: 0.5, rotate: 360 }} animate={{ scale: 1, rotate: 0 }} className="bg-purple-100 w-full max-w-sm p-8 rounded-[3rem] text-center border-[8px] border-purple-500 shadow-[0_0_50px_rgba(168,85,247,0.8)] relative">
               <div className="absolute inset-0 bg-purple-300 opacity-20 animate-pulse rounded-[2.5rem]"></div>
               <h3 className="text-3xl font-black text-purple-900 mb-2 z-10 relative">魔王擊破！</h3>
               <p className="text-stone-600 font-bold mb-4 z-10 relative">太強了！這是給勇者的保底獎勵</p>
