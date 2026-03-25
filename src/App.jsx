@@ -281,6 +281,7 @@ const MathJungleGame = () => {
   const [currentQ, setCurrentQ] = useState({ q: '準備開始！', a: 0, unit: '', points: 0, level: '' });
   const [petAssist, setPetAssist] = useState(null); 
   const [isChecking, setIsChecking] = useState(false);
+  const [checkText, setCheckText] = useState('');
 
   const [isBossActive, setIsBossActive] = useState(false); 
   const [bossStreak, setBossStreak] = useState(0); 
@@ -375,33 +376,14 @@ const MathJungleGame = () => {
   };
 
   useEffect(() => {
-    if (activeConsumableSSR) {
+    if (hasConsumableSSR) {
       setUserInput('');
       setMsg(`神力準備就緒！請直接點擊解放神力！`);
     } else if (petAssist) {
       setUserInput('');
       setMsg(`你的夥伴 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 衝出來想幫忙！點擊讓牠解答！`);
     }
-  }, [equippedItems, petAssist]);
-
-  const activeConsumableSSR = equippedItems.find(id => {
-    const item = ITEMS_DB.find(i => i.id === id);
-    return item && item.rarity === 'SSR' && item.type === 'consumable';
-  });
-
-  const checkDailyLimit = () => {
-    const today = new Date().toISOString().split('T')[0];
-    let currentStats = dailyStats;
-    if (currentStats.date !== today) {
-       currentStats = { date: today, count: 0 };
-    }
-    if (currentStats.count >= DAILY_INTERACT_LIMIT) {
-       alert('今天已經跟寵物互動太多次了，讓牠好好睡個覺休息一下吧！');
-       return false;
-    }
-    setDailyStats({ date: today, count: currentStats.count + 1 });
-    return true;
-  };
+  }, [hasConsumableSSR, petAssist]);
 
   const calculatePoints = () => {
     let itemBonus = 0;
@@ -437,8 +419,10 @@ const MathJungleGame = () => {
       return;
     }
 
+    const checkMsgs = ['石斧飛行中...', '瞄準目標...', '翻閱石板...', '集氣中...', '緊張緊張...'];
+    setCheckText(checkMsgs[Math.floor(Math.random() * checkMsgs.length)]);
     setIsChecking(true);
-    setMsg('石斧飛在半空中...');
+    setMsg('等待判定...');
 
     setTimeout(() => {
       setIsChecking(false);
@@ -801,6 +785,19 @@ const MathJungleGame = () => {
     }
   };
 
+  if (isSleepTime) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center p-4 font-mono text-center relative selection:bg-orange-300">
+         <div className="text-8xl mb-6 animate-pulse">💤</div>
+         <h1 className="text-3xl font-black text-stone-300 mb-4">夜深了，大家都睡了</h1>
+         <p className="text-stone-500 font-bold leading-relaxed">
+           狩獵與寵物互動已暫停。<br/>請在早上 6 點到晚上 10 點之間再來玩！
+         </p>
+         <button onClick={resetProgress} className="absolute bottom-6 text-stone-700 font-bold underline">刪除存檔重玩</button>
+      </div>
+    );
+  }
+
   const renderGame = () => {
     const { itemBonus, setBonus, activeSetNames } = calculatePoints();
     const totalBonus = itemBonus + setBonus;
@@ -868,9 +865,14 @@ const MathJungleGame = () => {
               className={`w-full text-center text-5xl font-black py-4 border-b-8 rounded-xl transition-all mb-6 ${(hasConsumableSSR || petAssist || isChecking) ? 'bg-yellow-100 text-purple-600 border-purple-400' : 'bg-stone-300 text-stone-700 border-stone-400'}`} 
             />
           </div>
-          <button onClick={handleCheckAnswer} disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}>
-            {isChecking ? '確認中...' : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
-          </button>
+          <motion.button 
+            animate={isChecking ? { scale: [1, 1.05, 1], transition: { duration: 0.5, repeat: Infinity } } : {}}
+            onClick={handleCheckAnswer} 
+            disabled={showReward || showBossVictory || isChecking || (userInput === '' && !petAssist && !hasConsumableSSR)} 
+            className={`w-full text-white font-black py-4 rounded-2xl text-2xl border-4 shadow-[0_6px_0_0_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-2 transition-all ${btnClass}`}
+          >
+            {isChecking ? checkText : (petAssist ? `讓 ${petAssist.name || PET_DATA[petAssist.type].speciesName} 解題！` : (hasConsumableSSR ? '神力解放 (消耗)' : (isBossActive ? '攻擊魔王！' : `擲出石斧！${totalBonus > 0 ? `(+${totalBonus})` : ''}`)))}
+          </motion.button>
         </div>
         <p className={`mt-6 font-bold px-4 py-2 rounded-full min-h-[3rem] flex items-center justify-center text-center whitespace-pre-line ${isBossActive ? 'bg-red-200 text-red-800' : 'bg-white/50 text-stone-600'}`}>
           {msg}
@@ -893,7 +895,7 @@ const MathJungleGame = () => {
         {gachaResult && (
           <motion.div initial={{ scale: 0, rotate: 180 }} animate={{ scale: 1, rotate: 0 }} className="absolute inset-0 bg-white/95 rounded-2xl flex flex-col items-center justify-center p-4 z-20">
             <div className={`text-sm font-bold mb-2 ${gachaResult.rarity === 'SSR' ? 'text-purple-600' : gachaResult.rarity === 'SR' ? 'text-red-500' : gachaResult.rarity === 'PET' ? 'text-blue-500' : 'text-green-600'}`}>
-              {gachaResult.rarity === 'SSR' ? '傳說' : gachaResult.rarity === 'SR' ? '稀弱' : gachaResult.rarity === 'PET' ? '神秘寵物' : '實用'}
+              {gachaResult.rarity === 'SSR' ? '傳說' : gachaResult.rarity === 'SR' ? '稀有' : gachaResult.rarity === 'PET' ? '神秘寵物' : '實用'}
             </div>
             <div className="text-8xl mb-4">{gachaResult.icon}</div>
             <h3 className="text-2xl font-black text-stone-800 mb-2">{gachaResult.name}</h3>
